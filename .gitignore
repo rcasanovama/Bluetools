@@ -1,0 +1,7 @@
+# Ignore object and output files
+bin/*
+obj/*
+
+.idea/*
+CMakeLists.txt
+cmake-build-debug/*
