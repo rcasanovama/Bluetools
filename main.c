@@ -23,7 +23,7 @@ uint8_t inquiry_scan(int dev_id, int dev_handle, T_BLUETOOTH_DEVICE** bluetooth_
 
 void query_bt_name(int dev_handle, T_BLUETOOTH_DEVICE* bluetooth_device);
 
-int main(int argc, char* argv[])
+int main()
 {
 	int dev_id, dev_handle;
 	int i;
