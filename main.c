@@ -1,8 +1,8 @@
-#include <stdint.h>
-
+#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <stdio.h>
+
+#include <stdint.h>
 
 #include <bluetooth/bluetooth.h>
 #include <bluetooth/hci.h>
@@ -11,22 +11,28 @@
 
 typedef struct
 {
-	char bt_address[19];
-	char bt_name[HCI_MAX_NAME_LENGTH];
-	struct hci_version bt_version;
+	bdaddr_t bdaddr;
+	char bdaddr_str[19];
+	char name[HCI_MAX_NAME_LENGTH];
+
+	uint8_t dev_class[3];
+	uint16_t clock_offset;
 
 } T_BLUETOOTH_DEVICE;
 
-void query_bt_name(int dev_handle, bdaddr_t* bdaddr);
+uint8_t inquiry_scan(int dev_id, int dev_handle, T_BLUETOOTH_DEVICE** bluetooth_devices);
+
+void query_bt_name(int dev_handle, T_BLUETOOTH_DEVICE* bluetooth_device);
 
 void query_bt_extra_information(int dev_id, int dev_handle, bdaddr_t* bdaddr);
 
 int main(int argc, char* argv[])
 {
-	inquiry_info* ii = NULL;
-	int max_rsp, num_rsp;
-	int dev_id, dev_handle, len, flags;
+	int dev_id, dev_handle;
 	int i;
+
+	uint8_t num_bluetooth_devices;
+	T_BLUETOOTH_DEVICE* bluetooth_devices;
 
 	dev_id = hci_get_route(NULL);
 	if (dev_id < 0)
@@ -42,6 +48,25 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
+	num_bluetooth_devices = inquiry_scan(dev_id, dev_handle, &bluetooth_devices);
+	for (i = 0; i < num_bluetooth_devices; i ++)
+	{
+		fprintf(stdout, "%s\t0x%2.2x%2.2x%2.2x\t%-20s\t(clk: 0x%4.4x)\n", bluetooth_devices[i].bdaddr_str, bluetooth_devices[i].dev_class[2], bluetooth_devices[i].dev_class[1], bluetooth_devices[i].dev_class[0], bluetooth_devices[i].name, btohs(bluetooth_devices[i].clock_offset));
+	}
+
+	free(bluetooth_devices);
+	close(dev_handle);
+
+	return 0;
+}
+
+uint8_t inquiry_scan(int dev_id, int dev_handle, T_BLUETOOTH_DEVICE** bluetooth_devices)
+{
+	inquiry_info* ii = NULL;
+	int max_rsp, num_rsp;
+	int len, flags;
+	int i;
+
 	len = 8;
 	max_rsp = 255;
 	flags = IREQ_CACHE_FLUSH;
@@ -53,31 +78,35 @@ int main(int argc, char* argv[])
 		perror("hci_inquiry");
 	}
 
+	(*bluetooth_devices) = (T_BLUETOOTH_DEVICE*) malloc(num_rsp * sizeof(T_BLUETOOTH_DEVICE));
 	for (i = 0; i < num_rsp; i ++)
 	{
-		query_bt_name(dev_handle, &(ii + i)->bdaddr);
-		query_bt_extra_information(dev_id, dev_handle, &(ii + i)->bdaddr);
+		// bdaddr struct
+		(*bluetooth_devices)[i].bdaddr = (ii + i)->bdaddr;
+		// bdaddr to plain text
+		ba2str(&(ii + i)->bdaddr, (*bluetooth_devices)[i].bdaddr_str);
+		// bluetooth name
+		query_bt_name(dev_handle, &(*bluetooth_devices)[i]);
+		// dev class
+		(*bluetooth_devices)[i].dev_class[2] = (ii + i)->dev_class[2];
+		(*bluetooth_devices)[i].dev_class[1] = (ii + i)->dev_class[1];
+		(*bluetooth_devices)[i].dev_class[0] = (ii + i)->dev_class[0];
+		// clock offset
+		(*bluetooth_devices)[i].clock_offset = (ii + i)->clock_offset;
 	}
 
 	free(ii);
-	close(dev_handle);
 
-	return 0;
+	return (uint8_t) num_rsp;
 }
 
 
-void query_bt_name(int dev_handle, bdaddr_t* bdaddr)
+void query_bt_name(int dev_handle, T_BLUETOOTH_DEVICE* bluetooth_device)
 {
-	char bt_address[19] = {0};
-	char bt_name[HCI_MAX_NAME_LENGTH] = {0};
-
-	ba2str(bdaddr, bt_address);
-	if (hci_read_remote_name(dev_handle, bdaddr, sizeof(bt_name), bt_name, 0) < 0)
+	if (hci_read_remote_name(dev_handle, &bluetooth_device->bdaddr, sizeof(bluetooth_device->name), bluetooth_device->name, 0) < 0)
 	{
-		strcpy(bt_name, "[unknown]");
+		strcpy(bluetooth_device->name, "[unknown]");
 	}
-
-	fprintf(stdout, "%s\t%s\n", bt_address, bt_name);
 }
 
 
