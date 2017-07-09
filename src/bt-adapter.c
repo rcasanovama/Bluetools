@@ -4,6 +4,8 @@ static int read_class(int dev_id, int dev_handle);
 
 static int read_version(int dev_id, int dev_handle, struct hci_dev_info di);
 
+static int read_afh_mode(int dev_id, int dev_handle);
+
 static char* get_minor_device_name(int major, int minor);
 
 
@@ -28,6 +30,11 @@ int about_local_device(int dev_id, int dev_handle)
 
 	fprintf(stdout, "\n");
 	read_version(dev_id, dev_handle, di);
+
+	fprintf(stdout, "\n");
+	read_afh_mode(dev_id, dev_handle);
+
+	fprintf(stdout, "\n");
 
 	return 0;
 }
@@ -118,6 +125,21 @@ static int read_version(int dev_id, int dev_handle, struct hci_dev_info di)
 	{
 		bt_free(lmpver);
 	}
+
+	return 0;
+}
+
+static int read_afh_mode(int dev_id, int dev_handle)
+{
+	uint8_t mode;
+
+	if (hci_read_afh_mode(dev_handle, &mode, 1000) < 0)
+	{
+		fprintf(stderr, "Can't read AFH mode on hci%d: %s (%d)\n", dev_id, strerror(errno), errno);
+		return 1;
+	}
+
+	fprintf(stdout, "\tAFH mode: %s\n", mode == 1 ? "Enabled" : "Disabled");
 
 	return 0;
 }
