@@ -1,6 +1,7 @@
 # Ignore object and output files
-bin/*
-obj/*
+bluescan/bin/*
+bluescan/obj/*
+bluescan/src
 
 .idea/*
 CMakeLists.txt
