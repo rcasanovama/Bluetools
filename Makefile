@@ -11,7 +11,7 @@ CLIBS = -lbluetooth
 OBJ_DIR = obj
 BIN_DIR = bin
 
-OBJ_BLUESCAN = $(OBJ_DIR)/main.o
+OBJ_BLUESCAN = $(OBJ_DIR)/src/bluescan.o $(OBJ_DIR)/main.o
 BIN_BLUESCAN = $(BIN_DIR)/bluescan
 
 
@@ -22,10 +22,12 @@ clean: clean_bluescan
 test_bluescan:
 	test -d $(BIN_DIR) || mkdir -p $(BIN_DIR)
 	test -d $(OBJ_DIR) || mkdir -p $(OBJ_DIR)
+	test -d $(OBJ_DIR)/src || mkdir -p $(OBJ_DIR)/src
 
 build_bluescan: test_bluescan
 
 	# Build obj files
+	$(CC) $(CFLAGS) -c src/bluescan.c -o $(OBJ_DIR)/src/bluescan.o
 	$(CC) $(CFLAGS) -c main.c -o $(OBJ_DIR)/main.o
 
 	# Link and generate bluescan program
