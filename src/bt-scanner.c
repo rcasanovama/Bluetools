@@ -2,7 +2,7 @@
  * Author:  Raul Casanova Marques
  * Date:    08/07/17
  */
-#include "bluescan.h"
+#include "bt-scanner.h"
 
 /**
  * Performs and inquiry scan of bluetooth devices

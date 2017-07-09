@@ -1,7 +1,11 @@
 # Ignore object and output files
-bluescan/bin/*
-bluescan/obj/*
-bluescan/src
+bt-scanner/bin/*
+bt-scanner/obj/*
+bt-scanner/src
+
+bt-adapter/bin/*
+bt-adapter/obj/*
+bt-adapter/src
 
 .idea/*
 CMakeLists.txt

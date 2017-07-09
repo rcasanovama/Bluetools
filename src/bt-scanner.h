@@ -1,5 +1,5 @@
-#ifndef _BLUESCAN_H
-#define _BLUESCAN_H
+#ifndef _BLUETOOTH_SCANNER_H
+#define _BLUETOOTH_SCANNER_H
 
 /**
  * Author:  Raul Casanova Marques
@@ -45,4 +45,4 @@ uint8_t inquiry_scan(int dev_id, int dev_handle, T_BLUETOOTH_DEVICE** bluetooth_
  */
 void query_bt_name(int dev_handle, T_BLUETOOTH_DEVICE* bluetooth_device);
 
-#endif // _BLUESCAN_H
+#endif // _BLUETOOTH_SCANNER_H
