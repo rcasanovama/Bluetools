@@ -1,3 +1,7 @@
+/**
+ * Author:  Raul Casanova Marques
+ * Date:    08/07/17
+ */
 #include "bt-adapter.h"
 
 static int read_class(int dev_id, int dev_handle);
@@ -8,16 +12,22 @@ static int read_afh_mode(int dev_id, int dev_handle);
 
 static char* get_minor_device_name(int major, int minor);
 
-
-int about_local_device(int dev_id, int dev_handle)
+int about_local_device(int dev_handle, int dev_id, long arg)
 {
-	struct hci_dev_info di;
+	struct hci_dev_info di = {.dev_id = (uint16_t) dev_id};
 	char addr[19] = {0};
+
+	dev_handle = hci_open_dev(dev_id);
+	if (dev_handle < 0)
+	{
+		perror("opening socket");
+		return 1;
+	}
 
 	if (hci_devinfo(dev_id, &di) < 0)
 	{
 		perror("Can't get device info");
-		return 1;
+		return 2;
 	}
 
 	ba2str(&di.bdaddr, addr);
@@ -35,6 +45,8 @@ int about_local_device(int dev_id, int dev_handle)
 	read_afh_mode(dev_id, dev_handle);
 
 	fprintf(stdout, "\n");
+
+	close(dev_handle);
 
 	return 0;
 }
