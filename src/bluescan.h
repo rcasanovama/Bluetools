@@ -1,6 +1,11 @@
 #ifndef _BLUESCAN_H
 #define _BLUESCAN_H
 
+/**
+ * Author:  Raul Casanova Marques
+ * Date:    08/07/17
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -22,8 +27,22 @@ typedef struct
 
 } T_BLUETOOTH_DEVICE;
 
+/**
+ * Performs and inquiry scan of bluetooth devices
+ *
+ * @param dev_id identifier of the bluetooth device
+ * @param dev_handle handle of the bluetooth connection
+ * @param bluetooth_devices list of bluetooth devices found with the scan
+ * @return number of bluetooth devices found with the scan
+ */
 uint8_t inquiry_scan(int dev_id, int dev_handle, T_BLUETOOTH_DEVICE** bluetooth_devices);
 
+/**
+ * Queries the name of the remote bluetooth device
+ *
+ * @param dev_handle handle of the bluetooth connection
+ * @param bluetooth_device bluetooth device
+ */
 void query_bt_name(int dev_handle, T_BLUETOOTH_DEVICE* bluetooth_device);
 
 #endif // _BLUESCAN_H

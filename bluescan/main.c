@@ -1,4 +1,4 @@
-#include "../src/bluescan.h"
+#include "src/bluescan.h"
 
 int main()
 {
