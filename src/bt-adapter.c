@@ -51,13 +51,41 @@ int about_local_device(int dev_handle, int dev_id, long arg)
 	return 0;
 }
 
+int write_name(int dev_id, int dev_handle, char* name)
+{
+	if (hci_write_local_name(dev_handle, name, 2000) < 0)
+	{
+		fprintf(stderr, "Can't change local name on hci%d: %s (%d)\n", dev_id, strerror(errno), errno);
+		return 1;
+	}
+	return 0;
+}
+
+int write_class(int dev_id, int dev_handle, char* class)
+{
+	uint32_t code;
+
+	code = (uint32_t) strtoul(class, NULL, 16);
+	if (hci_write_class_of_dev(dev_handle, code, 2000) < 0)
+	{
+		fprintf(stderr, "Can't write local class of device on hci%d: %s (%d)\n", dev_id, strerror(errno), errno);
+		return 1;
+	}
+	return 0;
+}
+
+int write_address(int dev_id, int dev_handle, char* address)
+{
+	return 0;
+}
+
 static int read_class(int dev_id, int dev_handle)
 {
 	static const char* services[] = {"Positioning", "Networking", "Rendering", "Capturing", "Object Transfer", "Audio", "Telephony", "Information"};
 	static const char* major_devices[] = {"Miscellaneous", "Computer", "Phone", "LAN Access", "Audio/Video", "Peripheral", "Imaging", "Uncategorized"};
 
 	uint8_t cls[3];
-	int first;
+	uint8_t first;
 	unsigned int i;
 
 	if (hci_read_class_of_dev(dev_handle, cls, 1000) < 0)
