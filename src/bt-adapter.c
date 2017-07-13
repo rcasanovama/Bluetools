@@ -4,9 +4,43 @@
  */
 #include "bt-adapter.h"
 
-struct btd_adapter* adapter_get_default(void)
+static char* get_minor_device_name(int major, int minor);
+
+static struct btd_adapter* adapter_init(uint16_t dev_id)
 {
 	struct btd_adapter* adapter;
+	int dd;
+
+	// Only to check if the device exists
+	dd = hci_open_dev(dev_id);
+	if (dd < 0)
+	{
+		return NULL;
+	}
+	hci_close_dev(dd);
+
+	adapter = (struct btd_adapter*) malloc(sizeof(struct btd_adapter));
+	if (! adapter)
+	{
+		return NULL;
+	}
+
+	adapter->dev_id = (uint16_t) dev_id;
+	adapter->adapter_name = adapter_read_local_name(adapter->dev_id);
+	assert(adapter->adapter_name != NULL);
+	adapter->adapter_class = adapter_read_local_class(adapter->dev_id);
+	assert(adapter->adapter_class != NULL);
+	adapter->adapter_address = adapter_read_local_address(adapter->dev_id);
+	assert(adapter->adapter_address != NULL);
+	adapter->adapter_version = adapter_read_local_version(adapter->dev_id);
+	assert(adapter->adapter_version != NULL);
+	adapter->afh_mode = adapter_read_local_afh_mode(adapter->afh_mode);
+
+	return adapter;
+}
+
+struct btd_adapter* adapter_get_default(void)
+{
 	int32_t dev_id;
 
 	dev_id = hci_get_route(NULL);
@@ -15,14 +49,12 @@ struct btd_adapter* adapter_get_default(void)
 		return NULL;
 	}
 
-	adapter = (struct btd_adapter*) malloc(sizeof(struct btd_adapter));
+	return adapter_init((uint16_t) dev_id);
+}
 
-	adapter->dev_id = (uint16_t) dev_id;
-	adapter->adapter_name = adapter_read_local_name(adapter->dev_id);
-	adapter->adapter_class = adapter_read_local_class(adapter->dev_id);
-	adapter->adapter_address = adapter_read_local_address(adapter->dev_id);
-
-	return adapter;
+struct btd_adapter* adapter_find_by_id(uint16_t dev_id)
+{
+	return adapter_init(dev_id);
 }
 
 uint16_t adapter_get_all(struct btd_adapter** adapters)
@@ -69,13 +101,8 @@ uint16_t adapter_get_all(struct btd_adapter** adapters)
 			dev_id = dev_req->dev_id;
 			if (dev_id >= 0)
 			{
-				(*adapters) = (struct btd_adapter*) realloc((*adapters), (number_adapters + 1) * sizeof(uint16_t));
-
-				(*adapters)[number_adapters].dev_id = (uint16_t) dev_id;
-				(*adapters)[number_adapters].adapter_name = adapter_read_local_name((*adapters)[number_adapters].dev_id);
-				(*adapters)[number_adapters].adapter_class = adapter_read_local_class((*adapters)[number_adapters].dev_id);
-				(*adapters)[number_adapters].adapter_address = adapter_read_local_address((*adapters)[number_adapters].dev_id);
-
+				(*adapters) = (struct btd_adapter*) realloc((*adapters), (number_adapters + 1) * sizeof(struct btd_adapter));
+				(*adapters)[number_adapters] = *(adapter_init((uint16_t) dev_id));
 				number_adapters ++;
 			}
 		}
@@ -84,20 +111,66 @@ uint16_t adapter_get_all(struct btd_adapter** adapters)
 	return number_adapters;
 }
 
-uint16_t adapter_get_index(struct btd_adapter* adapter)
+uint16_t adapter_get_index(struct btd_adapter adapter)
 {
-	return adapter->dev_id;
+	return adapter.dev_id;
+}
+
+void adapter_print_information(struct btd_adapter adapter)
+{
+	struct hci_dev_info dev_info;
+	int dd, err = 0;
+
+	dd = hci_open_dev(adapter.dev_id);
+	if (dd < 0)
+	{
+		perror("HCI device open failed");
+		err = 1;
+	}
+
+	if (hci_devinfo(adapter.dev_id, &dev_info) < 0)
+	{
+		perror("Can't get device info");
+		err = 1;
+
+		hci_close_dev(dd);
+	}
+
+	if (! err)
+	{
+		adapter_print_name(*adapter.adapter_name);
+		fprintf(stdout, "  Type: %s  Bus: %s\n", dev_info.name, hci_typetostr((dev_info.type & 0x30) >> 4), hci_bustostr(dev_info.type & 0x0f));
+		fprintf(stdout, "\tBD Address: %s  ACL MTU: %d:%d  SCO MTU: %d:%d\n", adapter.adapter_address->addr, dev_info.acl_mtu, dev_info.acl_pkts, dev_info.sco_mtu, dev_info.sco_pkts);
+
+		fprintf(stdout, "\n");
+		adapter_print_class(*adapter.adapter_class);
+
+		fprintf(stdout, "\n");
+		adapter_print_version(*adapter.adapter_version);
+
+		fprintf(stdout, "\n");
+		adapter_print_afh_mode(adapter.afh_mode);
+
+		fprintf(stdout, "\n");
+	}
 }
 
 struct btd_adapter_name* adapter_read_local_name(uint16_t dev_id)
 {
 	struct btd_adapter_name* adapter_name;
+	struct hci_dev_info dev_info;
 	char name[HCI_MAX_NAME_LENGTH];
 	int dd;
 
 	dd = hci_open_dev(dev_id);
 	if (dd < 0)
 	{
+		return NULL;
+	}
+
+	if (hci_devinfo(dev_id, &dev_info) < 0)
+	{
+		hci_close_dev(dd);
 		return NULL;
 	}
 
@@ -115,8 +188,8 @@ struct btd_adapter_name* adapter_read_local_name(uint16_t dev_id)
 		return NULL;
 	}
 
-	adapter_name->short_name = NULL;
 	adapter_name->name = strdup(name);
+	adapter_name->short_name = strdup(dev_info.name);
 
 	hci_close_dev(dd);
 
@@ -146,7 +219,7 @@ bool adapter_write_local_name(uint16_t dev_id, struct btd_adapter_name adapter_n
 
 void adapter_print_name(struct btd_adapter_name adapter_name)
 {
-
+	fprintf(stdout, "%s:\t%s", adapter_name.short_name, adapter_name.name);
 }
 
 struct btd_adapter_class* adapter_read_local_class(uint16_t dev_id)
@@ -214,7 +287,45 @@ bool adapter_write_local_class(uint16_t dev_id, struct btd_adapter_class adapter
 
 void adapter_print_class(struct btd_adapter_class adapter_class)
 {
+	static const char* services[] = {"Positioning", "Networking", "Rendering", "Capturing", "Object Transfer", "Audio", "Telephony", "Information"};
+	static const char* major_devices[] = {"Miscellaneous", "Computer", "Phone", "LAN Access", "Audio/Video", "Peripheral", "Imaging", "Uncategorized"};
 
+	bool first;
+	unsigned int i;
+
+	fprintf(stdout, "\tDevice class:\t\t0x%02x%02x%02x\n", adapter_class.cls[2], adapter_class.cls[1], adapter_class.cls[0]);
+	fprintf(stdout, "\tService classes:\t");
+	if (adapter_class.cls[2])
+	{
+		first = true;
+		for (i = 0; i < (sizeof(services) / sizeof(*services)); i ++)
+		{
+			if (adapter_class.cls[2] & (1 << i))
+			{
+				if (! first)
+				{
+					fprintf(stdout, ", ");
+				}
+				fprintf(stdout, "%s", services[i]);
+				first = false;
+			}
+		}
+		fprintf(stdout, "\n");
+	}
+	else
+	{
+		fprintf(stdout, "Unspecified\n");
+	}
+
+	fprintf(stdout, "\tClass description:\t");
+	if ((adapter_class.major_class) >= sizeof(major_devices) / sizeof(*major_devices))
+	{
+		fprintf(stdout, "Invalid device class!\n");
+	}
+	else
+	{
+		fprintf(stdout, "%s, %s\n", major_devices[adapter_class.major_class], get_minor_device_name(adapter_class.major_class, adapter_class.minor_class));
+	}
 }
 
 struct btd_adapter_address* adapter_read_local_address(uint16_t dev_id)
@@ -257,7 +368,87 @@ bool adapter_write_local_address(uint16_t dev_id, struct btd_adapter_address ada
 
 void adapter_print_address(struct btd_adapter_address adapter_address)
 {
+	fprintf(stdout, "\tBD Address: %s", adapter_address.addr);
+}
 
+struct btd_adapter_version* adapter_read_local_version(uint16_t dev_id)
+{
+	struct btd_adapter_version* adapter_version;
+	struct hci_dev_info dev_info;
+	struct hci_version ver;
+	int dd;
+
+	dd = hci_open_dev(dev_id);
+	if (dd < 0)
+	{
+		return NULL;
+	}
+
+	if (hci_devinfo(dev_id, &dev_info) < 0)
+	{
+		hci_close_dev(dd);
+		return NULL;
+	}
+
+	adapter_version = (struct btd_adapter_version*) malloc(sizeof(struct btd_adapter_version));
+	if (! adapter_version)
+	{
+		hci_close_dev(dd);
+		return NULL;
+	}
+
+	if (hci_read_local_version(dd, &ver, 1000) < 0)
+	{
+		free(adapter_version);
+		hci_close_dev(dd);
+		return NULL;
+	}
+
+	adapter_version->ver = ver;
+	adapter_version->hci_ver = hci_vertostr(ver.hci_ver);
+	if (((dev_info.type & 0x30) >> 4) == HCI_BREDR)
+	{
+		adapter_version->lmp_ver = lmp_vertostr(ver.lmp_ver);
+	}
+	else
+	{
+		adapter_version->lmp_ver = pal_vertostr(ver.lmp_ver);
+	}
+	adapter_version->type = dev_info.type;
+
+	return adapter_version;
+}
+
+void adapter_print_version(struct btd_adapter_version adapter_version)
+{
+	fprintf(stdout, "\tHCI Version: %s (0x%x)  Revision: 0x%x\n"
+			"\t%s Version: %s (0x%x)  Subversion: 0x%x\n"
+			"\tManufacturer: %s (%d)\n", adapter_version.hci_ver ? adapter_version.hci_ver : "n/a", adapter_version.ver.hci_ver, adapter_version.ver.hci_rev, (((adapter_version.type & 0x30) >> 4) == HCI_BREDR) ? "LMP" : "PAL", adapter_version.lmp_ver ? adapter_version.lmp_ver : "n/a", adapter_version.ver.lmp_ver, adapter_version.ver.lmp_subver, bt_compidtostr(adapter_version.ver.manufacturer), adapter_version.ver.manufacturer);
+}
+
+uint8_t adapter_read_local_afh_mode(uint16_t dev_id)
+{
+	uint8_t afh_mode;
+	int dd;
+
+	dd = hci_open_dev(dev_id);
+	if (dd < 0)
+	{
+		return 0;
+	}
+
+	if (hci_read_afh_mode(dd, &afh_mode, 1000) < 0)
+	{
+		hci_close_dev(dd);
+		return 0;
+	}
+
+	return afh_mode;
+}
+
+void adapter_print_afh_mode(uint8_t afh_mode)
+{
+	fprintf(stdout, "\tAFH mode: %s", afh_mode == 1 ? "Enabled" : "Disabled");
 }
 
 void adapter_cleanup(struct btd_adapter* adapter)
@@ -290,187 +481,22 @@ void adapter_cleanup(struct btd_adapter* adapter)
 		free(adapter->adapter_address);
 		adapter->adapter_address = NULL;
 	}
-}
-
-
-static int read_class(int dev_id, int dev_handle);
-
-static int read_version(int dev_id, int dev_handle, struct hci_dev_info di);
-
-static int read_afh_mode(int dev_id, int dev_handle);
-
-static char* get_minor_device_name(int major, int minor);
-
-int about_local_device(int dev_handle, int dev_id, long arg)
-{
-	struct hci_dev_info di = {.dev_id = (uint16_t) dev_id};
-	char addr[19] = {0};
-
-	dev_handle = hci_open_dev(dev_id);
-	if (dev_handle < 0)
+	// free adapter_version
+	if (adapter->adapter_version)
 	{
-		perror("opening socket");
-		return 1;
-	}
-
-	if (hci_devinfo(dev_id, &di) < 0)
-	{
-		perror("Can't get device info");
-		return 2;
-	}
-
-	ba2str(&di.bdaddr, addr);
-
-	fprintf(stdout, "%s:\tType: %s  Bus: %s\n", di.name, hci_typetostr((di.type & 0x30) >> 4), hci_bustostr(di.type & 0x0f));
-	fprintf(stdout, "\tBD Address: %s  ACL MTU: %d:%d  SCO MTU: %d:%d\n", addr, di.acl_mtu, di.acl_pkts, di.sco_mtu, di.sco_pkts);
-
-	fprintf(stdout, "\n");
-	read_class(dev_id, dev_handle);
-
-	fprintf(stdout, "\n");
-	read_version(dev_id, dev_handle, di);
-
-	fprintf(stdout, "\n");
-	read_afh_mode(dev_id, dev_handle);
-
-	fprintf(stdout, "\n");
-
-	close(dev_handle);
-
-	return 0;
-}
-
-int write_name(int dev_id, int dev_handle, char* name)
-{
-	if (hci_write_local_name(dev_handle, name, 2000) < 0)
-	{
-		fprintf(stderr, "Can't change local name on hci%d: %s (%d)\n", dev_id, strerror(errno), errno);
-		return 1;
-	}
-	return 0;
-}
-
-int write_class(int dev_id, int dev_handle, char* class)
-{
-	uint32_t code;
-
-	code = (uint32_t) strtoul(class, NULL, 16);
-	if (hci_write_class_of_dev(dev_handle, code, 2000) < 0)
-	{
-		fprintf(stderr, "Can't write local class of device on hci%d: %s (%d)\n", dev_id, strerror(errno), errno);
-		return 1;
-	}
-	return 0;
-}
-
-int write_address(int dev_id, int dev_handle, char* address)
-{
-	return 0;
-}
-
-static int read_class(int dev_id, int dev_handle)
-{
-	static const char* services[] = {"Positioning", "Networking", "Rendering", "Capturing", "Object Transfer", "Audio", "Telephony", "Information"};
-	static const char* major_devices[] = {"Miscellaneous", "Computer", "Phone", "LAN Access", "Audio/Video", "Peripheral", "Imaging", "Uncategorized"};
-
-	uint8_t cls[3];
-	uint8_t first;
-	unsigned int i;
-
-	if (hci_read_class_of_dev(dev_handle, cls, 1000) < 0)
-	{
-		fprintf(stderr, "Can't read class of device on hci%d: %s (%d)\n", dev_id, strerror(errno), errno);
-		return 1;
-	}
-
-	fprintf(stdout, "\tDevice class:\t\t0x%02x%02x%02x\n", cls[2], cls[1], cls[0]);
-	fprintf(stdout, "\tService classes:\t");
-	if (cls[2])
-	{
-		first = 1;
-		for (i = 0; i < (sizeof(services) / sizeof(*services)); i ++)
+		if (adapter->adapter_version->hci_ver)
 		{
-			if (cls[2] & (1 << i))
-			{
-				if (! first)
-				{
-					fprintf(stdout, ", ");
-				}
-				fprintf(stdout, "%s", services[i]);
-				first = 0;
-			}
+			free(adapter->adapter_version->hci_ver);
+			adapter->adapter_version->hci_ver = NULL;
 		}
-		fprintf(stdout, "\n");
+		if (adapter->adapter_version->lmp_ver)
+		{
+			free(adapter->adapter_version->lmp_ver);
+			adapter->adapter_version->lmp_ver = NULL;
+		}
+		free(adapter->adapter_version);
+		adapter->adapter_version = NULL;
 	}
-	else
-	{
-		fprintf(stdout, "Unspecified\n");
-	}
-
-	fprintf(stdout, "\tClass description:\t");
-	if ((cls[1] & 0x1f) >= sizeof(major_devices) / sizeof(*major_devices))
-	{
-		fprintf(stdout, "Invalid device class!\n");
-	}
-	else
-	{
-		fprintf(stdout, "%s, %s\n", major_devices[cls[1] & 0x1f], get_minor_device_name(cls[1] & 0x1f, cls[0] >> 2));
-	}
-
-	return 0;
-}
-
-static int read_version(int dev_id, int dev_handle, struct hci_dev_info di)
-{
-	struct hci_version ver;
-	char* hciver, * lmpver;
-
-	if (hci_read_local_version(dev_handle, &ver, 1000) < 0)
-	{
-		fprintf(stderr, "Can't read version info hci%d: %s (%d)\n", dev_id, strerror(errno), errno);
-		return 1;
-	}
-
-	hciver = hci_vertostr(ver.hci_ver);
-	if (((di.type & 0x30) >> 4) == HCI_BREDR)
-	{
-		lmpver = lmp_vertostr(ver.lmp_ver);
-	}
-	else
-	{
-		lmpver = pal_vertostr(ver.lmp_ver);
-	}
-
-	fprintf(stdout, "\tHCI Version: %s (0x%x)  Revision: 0x%x\n"
-			"\t%s Version: %s (0x%x)  Subversion: 0x%x\n"
-			"\tManufacturer: %s (%d)\n", hciver ? hciver : "n/a", ver.hci_ver, ver.hci_rev, (((di.type & 0x30) >> 4) == HCI_BREDR) ? "LMP" : "PAL", lmpver ? lmpver : "n/a", ver.lmp_ver, ver.lmp_subver, bt_compidtostr(ver.manufacturer), ver.manufacturer);
-
-	if (hciver)
-	{
-		bt_free(hciver);
-	}
-
-	if (lmpver)
-	{
-		bt_free(lmpver);
-	}
-
-	return 0;
-}
-
-static int read_afh_mode(int dev_id, int dev_handle)
-{
-	uint8_t mode;
-
-	if (hci_read_afh_mode(dev_handle, &mode, 1000) < 0)
-	{
-		fprintf(stderr, "Can't read AFH mode on hci%d: %s (%d)\n", dev_id, strerror(errno), errno);
-		return 1;
-	}
-
-	fprintf(stdout, "\tAFH mode: %s\n", mode == 1 ? "Enabled" : "Disabled");
-
-	return 0;
 }
 
 static char* get_minor_device_name(int major, int minor)

@@ -13,6 +13,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <assert.h>
 
 #include <errno.h>
 #include <sys/ioctl.h>
@@ -24,9 +25,13 @@
 
 struct btd_adapter* adapter_get_default(void);
 
+struct btd_adapter* adapter_find_by_id(uint16_t dev_id);
+
 uint16_t adapter_get_all(struct btd_adapter** adapters);
 
-uint16_t adapter_get_index(struct btd_adapter* adapter);
+uint16_t adapter_get_index(struct btd_adapter adapter);
+
+void adapter_print_information(struct btd_adapter adapter);
 
 struct btd_adapter_name* adapter_read_local_name(uint16_t dev_id);
 
@@ -46,9 +51,14 @@ bool adapter_write_local_address(uint16_t dev_id, struct btd_adapter_address ada
 
 void adapter_print_address(struct btd_adapter_address adapter_address);
 
+struct btd_adapter_version* adapter_read_local_version(uint16_t dev_id);
+
+void adapter_print_version(struct btd_adapter_version adapter_version);
+
+uint8_t adapter_read_local_afh_mode(uint16_t dev_id);
+
+void adapter_print_afh_mode(uint8_t afh_mode);
+
 void adapter_cleanup(struct btd_adapter* adapter);
-
-
-int about_local_device(int dev_handle, int dev_id, long arg);
 
 #endif // _BLUETOOTH_ADAPTER_H
