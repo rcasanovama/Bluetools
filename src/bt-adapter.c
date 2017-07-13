@@ -139,7 +139,7 @@ void adapter_print_information(struct btd_adapter adapter)
 	if (! err)
 	{
 		adapter_print_name(*adapter.adapter_name);
-		fprintf(stdout, "  Type: %s  Bus: %s\n", dev_info.name, hci_typetostr((dev_info.type & 0x30) >> 4), hci_bustostr(dev_info.type & 0x0f));
+		fprintf(stdout, "  Type: %s  Bus: %s\n", hci_typetostr((dev_info.type & 0x30) >> 4), hci_bustostr(dev_info.type & 0x0f));
 		fprintf(stdout, "\tBD Address: %s  ACL MTU: %d:%d  SCO MTU: %d:%d\n", adapter.adapter_address->addr, dev_info.acl_mtu, dev_info.acl_pkts, dev_info.sco_mtu, dev_info.sco_pkts);
 
 		fprintf(stdout, "\n");
