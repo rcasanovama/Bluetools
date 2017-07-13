@@ -4,6 +4,295 @@
  */
 #include "bt-adapter.h"
 
+struct btd_adapter* adapter_get_default(void)
+{
+	struct btd_adapter* adapter;
+	int32_t dev_id;
+
+	dev_id = hci_get_route(NULL);
+	if (dev_id < 0)
+	{
+		return NULL;
+	}
+
+	adapter = (struct btd_adapter*) malloc(sizeof(struct btd_adapter));
+
+	adapter->dev_id = (uint16_t) dev_id;
+	adapter->adapter_name = adapter_read_local_name(adapter->dev_id);
+	adapter->adapter_class = adapter_read_local_class(adapter->dev_id);
+	adapter->adapter_address = adapter_read_local_address(adapter->dev_id);
+
+	return adapter;
+}
+
+uint16_t adapter_get_all(struct btd_adapter** adapters)
+{
+	struct hci_dev_list_req* dev_list_req;
+	struct hci_dev_req* dev_req;
+
+	int32_t btd_socket, dev_id;
+	uint16_t number_adapters;
+	int i;
+
+
+	btd_socket = socket(AF_BLUETOOTH, SOCK_RAW | SOCK_CLOEXEC, BTPROTO_HCI);
+	if (btd_socket < 0)
+	{
+		return 0;
+	}
+
+	dev_list_req = (struct hci_dev_list_req*) malloc(HCI_MAX_DEV * sizeof(*dev_req) + sizeof(*dev_list_req));
+	if (! dev_list_req)
+	{
+		close(btd_socket);
+		return 0;
+	}
+
+	memset(dev_list_req, 0, HCI_MAX_DEV * sizeof(*dev_req) + sizeof(*dev_list_req));
+
+	dev_list_req->dev_num = HCI_MAX_DEV;
+	dev_req = dev_list_req->dev_req;
+
+	if (ioctl(btd_socket, HCIGETDEVLIST, (void*) dev_list_req) < 0)
+	{
+		free(dev_list_req);
+		close(btd_socket);
+		return 0;
+	}
+
+	(*adapters) = NULL;
+	number_adapters = 0;
+	for (i = 0; i < dev_list_req->dev_num; i ++, dev_req ++)
+	{
+		if (hci_test_bit(HCI_UP, &dev_req->dev_opt))
+		{
+			dev_id = dev_req->dev_id;
+			if (dev_id >= 0)
+			{
+				(*adapters) = (struct btd_adapter*) realloc((*adapters), (number_adapters + 1) * sizeof(uint16_t));
+
+				(*adapters)[number_adapters].dev_id = (uint16_t) dev_id;
+				(*adapters)[number_adapters].adapter_name = adapter_read_local_name((*adapters)[number_adapters].dev_id);
+				(*adapters)[number_adapters].adapter_class = adapter_read_local_class((*adapters)[number_adapters].dev_id);
+				(*adapters)[number_adapters].adapter_address = adapter_read_local_address((*adapters)[number_adapters].dev_id);
+
+				number_adapters ++;
+			}
+		}
+	}
+
+	return number_adapters;
+}
+
+uint16_t adapter_get_index(struct btd_adapter* adapter)
+{
+	return adapter->dev_id;
+}
+
+struct btd_adapter_name* adapter_read_local_name(uint16_t dev_id)
+{
+	struct btd_adapter_name* adapter_name;
+	char name[HCI_MAX_NAME_LENGTH];
+	int dd;
+
+	dd = hci_open_dev(dev_id);
+	if (dd < 0)
+	{
+		return NULL;
+	}
+
+	adapter_name = (struct btd_adapter_name*) malloc(sizeof(struct btd_adapter_name));
+	if (! adapter_name)
+	{
+		hci_close_dev(dd);
+		return NULL;
+	}
+
+	if (hci_read_local_name(dd, sizeof(name), name, 1000) < 0)
+	{
+		free(adapter_name);
+		hci_close_dev(dd);
+		return NULL;
+	}
+
+	adapter_name->short_name = NULL;
+	adapter_name->name = strdup(name);
+
+	hci_close_dev(dd);
+
+	return adapter_name;
+}
+
+bool adapter_write_local_name(uint16_t dev_id, struct btd_adapter_name adapter_name)
+{
+	int dd;
+
+	dd = hci_open_dev(dev_id);
+	if (dd < 0)
+	{
+		return false;
+	}
+
+	if (hci_write_local_name(dd, adapter_name.name, 1000) < 0)
+	{
+		hci_close_dev(dd);
+		return false;
+	}
+
+	hci_close_dev(dd);
+
+	return true;
+}
+
+void adapter_print_name(struct btd_adapter_name adapter_name)
+{
+
+}
+
+struct btd_adapter_class* adapter_read_local_class(uint16_t dev_id)
+{
+	struct btd_adapter_class* adapter_class;
+	char dev_class[10];
+	uint8_t cls[3];
+	int dd;
+
+	dd = hci_open_dev(dev_id);
+	if (dd < 0)
+	{
+		return NULL;
+	}
+
+	adapter_class = (struct btd_adapter_class*) malloc(sizeof(struct btd_adapter_class));
+	if (! adapter_class)
+	{
+		hci_close_dev(dd);
+		return NULL;
+	}
+
+	if (hci_read_class_of_dev(dd, cls, 1000) < 0)
+	{
+		free(adapter_class);
+		hci_close_dev(dd);
+		return NULL;
+	}
+
+	adapter_class->cls[2] = cls[2];
+	adapter_class->cls[1] = cls[1];
+	adapter_class->cls[0] = cls[0];
+
+	snprintf(dev_class, 10, "%02x%02x%02x", cls[2], cls[1], cls[0]);
+	adapter_class->dev_class = (uint32_t) strtoul(dev_class, NULL, 16);
+
+	adapter_class->major_class = cls[1] & ((uint8_t) 0x1f);
+	adapter_class->minor_class = cls[0] >> 2;
+
+	hci_close_dev(dd);
+
+	return adapter_class;
+}
+
+bool adapter_write_local_class(uint16_t dev_id, struct btd_adapter_class adapter_class)
+{
+	int dd;
+
+	dd = hci_open_dev(dev_id);
+	if (dd < 0)
+	{
+		return false;
+	}
+
+	if (hci_write_class_of_dev(dd, adapter_class.dev_class, 1000) < 0)
+	{
+		hci_close_dev(dd);
+		return false;
+	}
+
+	hci_close_dev(dd);
+
+	return true;
+}
+
+void adapter_print_class(struct btd_adapter_class adapter_class)
+{
+
+}
+
+struct btd_adapter_address* adapter_read_local_address(uint16_t dev_id)
+{
+	struct btd_adapter_address* adapter_address;
+	struct hci_dev_info dev_info;
+	int dd;
+
+	dd = hci_open_dev(dev_id);
+	if (dd < 0)
+	{
+		return NULL;
+	}
+
+	if (hci_devinfo(dev_id, &dev_info) < 0)
+	{
+		hci_close_dev(dd);
+		return NULL;
+	}
+
+	adapter_address = (struct btd_adapter_address*) malloc(sizeof(struct btd_adapter_address));
+	if (! adapter_address)
+	{
+		hci_close_dev(dd);
+		return NULL;
+	}
+
+	adapter_address->bdaddr = dev_info.bdaddr;
+	ba2str(&dev_info.bdaddr, adapter_address->addr);
+
+	hci_close_dev(dd);
+
+	return adapter_address;
+}
+
+bool adapter_write_local_address(uint16_t dev_id, struct btd_adapter_address adapter_address)
+{
+	return false;
+}
+
+void adapter_print_address(struct btd_adapter_address adapter_address)
+{
+
+}
+
+void adapter_cleanup(struct btd_adapter* adapter)
+{
+	// free adapter_name
+	if (adapter->adapter_name)
+	{
+		if (adapter->adapter_name->name)
+		{
+			free(adapter->adapter_name->name);
+			adapter->adapter_name->name = NULL;
+		}
+		if (adapter->adapter_name->short_name)
+		{
+			free(adapter->adapter_name->short_name);
+			adapter->adapter_name->short_name = NULL;
+		}
+		free(adapter->adapter_name);
+		adapter->adapter_name = NULL;
+	}
+	// free adapter_class
+	if (adapter->adapter_class)
+	{
+		free(adapter->adapter_class);
+		adapter->adapter_class = NULL;
+	}
+	// free adapter_address
+	if (adapter->adapter_address)
+	{
+		free(adapter->adapter_address);
+		adapter->adapter_address = NULL;
+	}
+}
+
+
 static int read_class(int dev_id, int dev_handle);
 
 static int read_version(int dev_id, int dev_handle, struct hci_dev_info di);
