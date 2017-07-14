@@ -6,6 +6,11 @@
  * Date:    13/07/17
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #include <stdint.h>
 
 #include <bluetooth/bluetooth.h>
@@ -74,5 +79,9 @@ struct btd_device
 
 	uint16_t clock_offset;       /* controller clock offset */
 };
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // _BLUETOOTH_TYPES_H

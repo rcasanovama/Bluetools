@@ -6,6 +6,11 @@
  * Date:    08/07/17
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -60,5 +65,9 @@ uint8_t adapter_read_local_afh_mode(uint16_t dev_id);
 void adapter_print_afh_mode(uint8_t afh_mode);
 
 void adapter_cleanup(struct btd_adapter* adapter);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // _BLUETOOTH_ADAPTER_H

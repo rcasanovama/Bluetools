@@ -6,6 +6,11 @@
  * Date:    08/07/17
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -50,5 +55,9 @@ bool device_read_remote_name(struct btd_adapter adapter, struct btd_device* devi
  * @param device remote bluetooth device
  */
 void device_cleanup(struct btd_device* device);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // _BLUETOOTH_SCANNER_H
