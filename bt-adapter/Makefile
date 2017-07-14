@@ -11,7 +11,7 @@ CLIBS = -lbluetooth
 OBJ_DIR = obj
 BIN_DIR = bin
 
-OBJ_BT_ADAPTER = $(OBJ_DIR)/src/bt-adapter.o $(OBJ_DIR)/main.o
+OBJ_BT_ADAPTER = $(OBJ_DIR)/src/oui.o $(OBJ_DIR)/src/bdaddr.o $(OBJ_DIR)/src/bt-adapter.o $(OBJ_DIR)/main.o
 BIN_BT_ADAPTER = $(BIN_DIR)/bt-adapter
 
 
@@ -27,6 +27,8 @@ test_bt_adapter:
 build_bt_adapter: test_bt_adapter
 
 	# Build obj files
+	$(CC) $(CFLAGS) -c src/oui.c -o $(OBJ_DIR)/src/oui.o
+	$(CC) $(CFLAGS) -c src/bdaddr.c -o $(OBJ_DIR)/src/bdaddr.o
 	$(CC) $(CFLAGS) -c src/bt-adapter.c -o $(OBJ_DIR)/src/bt-adapter.o
 	$(CC) $(CFLAGS) -c main.c -o $(OBJ_DIR)/main.o
 

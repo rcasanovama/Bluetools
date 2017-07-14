@@ -4,6 +4,8 @@
  */
 #include "bt-adapter.h"
 
+extern int hci_write_bd_addr(int dd, uint16_t dev_id, char* _addr, uint8_t _transient, uint8_t _reset);
+
 static char* get_minor_device_name(int major, int minor);
 
 static struct btd_adapter* adapter_init(uint16_t dev_id)
@@ -363,7 +365,23 @@ struct btd_adapter_address* adapter_read_local_address(uint16_t dev_id)
 
 bool adapter_write_local_address(uint16_t dev_id, struct btd_adapter_address adapter_address)
 {
-	return false;
+	int dd;
+
+	dd = hci_open_dev(dev_id);
+	if (dd < 0)
+	{
+		return false;
+	}
+
+	if (hci_write_bd_addr(dd, dev_id, adapter_address.addr, 0, 0) < 0)
+	{
+		hci_close_dev(dd);
+		return false;
+	}
+
+	hci_close_dev(dd);
+
+	return true;
 }
 
 void adapter_print_address(struct btd_adapter_address adapter_address)
