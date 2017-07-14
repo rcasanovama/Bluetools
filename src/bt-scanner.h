@@ -11,38 +11,44 @@
 #include <unistd.h>
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #include <bluetooth/bluetooth.h>
 #include <bluetooth/hci.h>
 #include <bluetooth/hci_lib.h>
 
-typedef struct
-{
-	bdaddr_t bdaddr;
-	char bdaddr_str[19];
-	char name[HCI_MAX_NAME_LENGTH];
-
-	uint8_t dev_class[3];
-	uint16_t clock_offset;
-
-} T_BLUETOOTH_DEVICE;
+#include "bt-types.h"
 
 /**
  * Performs and inquiry scan of bluetooth devices
  *
- * @param dev_id identifier of the bluetooth device
- * @param dev_handle handle of the bluetooth connection
- * @param bluetooth_devices list of bluetooth devices found with the scan
+ * @param adapter local bluetooth device
+ * @param devices list of bluetooth devices found with the scan
  * @return number of bluetooth devices found with the scan
  */
-uint8_t inquiry_scan(int dev_id, int dev_handle, T_BLUETOOTH_DEVICE** bluetooth_devices);
+uint8_t device_inquiry_scan(struct btd_adapter adapter, struct btd_device** devices);
 
 /**
- * Queries the name of the remote bluetooth device
+ * Prints the information of the remote device
  *
- * @param dev_handle handle of the bluetooth connection
- * @param bluetooth_device bluetooth device
+ * @param device remote bluetooth device
  */
-void query_bt_name(int dev_handle, T_BLUETOOTH_DEVICE* bluetooth_device);
+void device_print_information(struct btd_device device);
+
+/**
+ * Reads the name of the remote bluetooth device
+ *
+ * @param adapter local bluetooth device
+ * @param device remote bluetooth device
+ * @return true on success, false otherwise
+ */
+bool device_read_remote_name(struct btd_adapter adapter, struct btd_device* device);
+
+/**
+ * Cleans the information of the remote device
+ *
+ * @param device remote bluetooth device
+ */
+void device_cleanup(struct btd_device* device);
 
 #endif // _BLUETOOTH_SCANNER_H

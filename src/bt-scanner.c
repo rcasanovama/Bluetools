@@ -4,15 +4,59 @@
  */
 #include "bt-scanner.h"
 
+static struct btd_device* device_init(struct btd_adapter adapter, uint8_t cls[3], bdaddr_t bdaddr, uint16_t clock_offset)
+{
+	struct btd_device* device;
+	char dev_class[10];
+
+	device = (struct btd_device*) malloc(sizeof(struct btd_device));
+	if (! device)
+	{
+		return NULL;
+	}
+
+	device->device_class = (struct btd_device_class*) malloc(sizeof(struct btd_device_class));
+	if (! device->device_class)
+	{
+		free(device);
+		return NULL;
+	}
+
+	device->device_class->cls[2] = cls[2];
+	device->device_class->cls[1] = cls[1];
+	device->device_class->cls[0] = cls[0];
+
+	snprintf(dev_class, 10, "%02x%02x%02x", cls[2], cls[1], cls[0]);
+	device->device_class->dev_class = (uint32_t) strtoul(dev_class, NULL, 16);
+
+	device->device_class->major_class = cls[1] & ((uint8_t) 0x1f);
+	device->device_class->minor_class = cls[0] >> 2;
+
+	device->device_address = (struct btd_device_address*) malloc(sizeof(struct btd_device_address));
+	if (! device->device_address)
+	{
+		free(device->device_class);
+		free(device);
+		return NULL;
+	}
+
+	device->device_address->bdaddr = bdaddr;
+	ba2str(&bdaddr, device->device_address->addr);
+
+	device_read_remote_name(adapter, device);
+	device->clock_offset = clock_offset;
+
+	return device;
+}
+
 /**
  * Performs and inquiry scan of bluetooth devices
  *
- * @param dev_id identifier of the bluetooth device
- * @param dev_handle handle of the bluetooth connection
- * @param bluetooth_devices list of bluetooth devices found with the scan
+ * @param adapter local bluetooth device
+ * @param devices list of bluetooth devices found with the scan
  * @return number of bluetooth devices found with the scan
  */
-uint8_t inquiry_scan(int dev_id, int dev_handle, T_BLUETOOTH_DEVICE** bluetooth_devices)
+uint8_t device_inquiry_scan(struct btd_adapter adapter, struct btd_device** devices)
 {
 	inquiry_info* ii = NULL;
 	int max_rsp, num_rsp;
@@ -23,28 +67,33 @@ uint8_t inquiry_scan(int dev_id, int dev_handle, T_BLUETOOTH_DEVICE** bluetooth_
 	max_rsp = 255;
 	flags = IREQ_CACHE_FLUSH;
 	ii = (inquiry_info*) malloc(max_rsp * sizeof(inquiry_info));
+	if (! ii)
+	{
+		perror("malloc (ii)");
+		return 0;
+	}
 
-	num_rsp = hci_inquiry(dev_id, len, max_rsp, NULL, &ii, flags);
+	num_rsp = hci_inquiry(adapter.dev_id, len, max_rsp, NULL, &ii, flags);
 	if (num_rsp < 0)
 	{
 		perror("hci_inquiry");
+
+		free(ii);
+		return 0;
 	}
 
-	(*bluetooth_devices) = (T_BLUETOOTH_DEVICE*) malloc(num_rsp * sizeof(T_BLUETOOTH_DEVICE));
+	(*devices) = (struct btd_device*) malloc(num_rsp * sizeof(struct btd_device));
+	if (! (*devices))
+	{
+		perror("malloc (*devices)");
+
+		free(ii);
+		return 0;
+	}
+
 	for (i = 0; i < num_rsp; i ++)
 	{
-		// bdaddr struct
-		(*bluetooth_devices)[i].bdaddr = (ii + i)->bdaddr;
-		// bdaddr to plain text
-		ba2str(&(ii + i)->bdaddr, (*bluetooth_devices)[i].bdaddr_str);
-		// bluetooth name
-		query_bt_name(dev_handle, &(*bluetooth_devices)[i]);
-		// dev class
-		(*bluetooth_devices)[i].dev_class[2] = (ii + i)->dev_class[2];
-		(*bluetooth_devices)[i].dev_class[1] = (ii + i)->dev_class[1];
-		(*bluetooth_devices)[i].dev_class[0] = (ii + i)->dev_class[0];
-		// clock offset
-		(*bluetooth_devices)[i].clock_offset = (ii + i)->clock_offset;
+		(*devices)[i] = *device_init(adapter, (ii + i)->dev_class, (ii + i)->bdaddr, (ii + i)->clock_offset);
 	}
 
 	free(ii);
@@ -53,15 +102,69 @@ uint8_t inquiry_scan(int dev_id, int dev_handle, T_BLUETOOTH_DEVICE** bluetooth_
 }
 
 /**
- * Queries the name of the remote bluetooth device
+ * Prints the information of the remote device
  *
- * @param dev_handle handle of the bluetooth connection
- * @param bluetooth_device bluetooth device
+ * @param device remote bluetooth device
  */
-void query_bt_name(int dev_handle, T_BLUETOOTH_DEVICE* bluetooth_device)
+void device_print_information(struct btd_device device)
 {
-	if (hci_read_remote_name(dev_handle, &bluetooth_device->bdaddr, sizeof(bluetooth_device->name), bluetooth_device->name, 0) < 0)
+	fprintf(stdout, "%s\t0x%2.2x%2.2x%2.2x\t%-20s\t(clk: 0x%4.4x)\n", device.device_address->addr, device.device_class->cls[2], device.device_class->cls[1], device.device_class->cls[0], device.name, btohs(device.clock_offset));
+}
+
+/**
+ * Reads the name of the remote bluetooth device
+ *
+ * @param adapter local bluetooth device
+ * @param device remote bluetooth device
+ * @return true on success, false otherwise
+ */
+bool device_read_remote_name(struct btd_adapter adapter, struct btd_device* device)
+{
+	char name[HCI_MAX_NAME_LENGTH] = {0};
+	int dd, err = 0;
+
+	dd = hci_open_dev(adapter.dev_id);
+	if (dd < 0)
 	{
-		strcpy(bluetooth_device->name, "[unknown]");
+		return false;
+	}
+
+	if (hci_read_remote_name(dd, &device->device_address->bdaddr, sizeof(name), name, 0) < 0)
+	{
+		strcpy(name, "[unknown]");
+		err = 1;
+	}
+
+	device->name = strdup(name);
+
+	hci_close_dev(dd);
+
+	return ! err ? true : false;
+}
+
+/**
+ * Cleans the information of the remote device
+ *
+ * @param device remote bluetooth device
+ */
+void device_cleanup(struct btd_device* device)
+{
+	// free name
+	if (device->name)
+	{
+		free(device->name);
+		device->name = NULL;
+	}
+	// free device_class
+	if (device->device_class)
+	{
+		free(device->device_class);
+		device->device_class = NULL;
+	}
+	// free device_address
+	if (device->device_address)
+	{
+		free(device->device_address);
+		device->device_address = NULL;
 	}
 }

@@ -4,14 +4,14 @@ CC = gcc
 LD = gcc
 
 CFLAGS = -Winit-self -Wredundant-decls -Wcast-align -Wundef -Wfloat-equal -Winline -Wunreachable-code -Wmissing-declarations -Wmissing-include-dirs -Wswitch-enum -Wswitch-default -Wmain -pedantic-errors -pedantic -Wshadow -Wextra -Wall -g -ansi -std=c11
-CFLAGS += -O
+CFLAGS += -O -D_GNU_SOURCE
 
 CLIBS = -lbluetooth
 
 OBJ_DIR = obj
 BIN_DIR = bin
 
-OBJ_BT_SCANNER = $(OBJ_DIR)/src/bt-scanner.o $(OBJ_DIR)/main.o
+OBJ_BT_SCANNER = $(OBJ_DIR)/src/bt-adapter.o $(OBJ_DIR)/src/bt-scanner.o $(OBJ_DIR)/main.o
 BIN_BT_SCANNER = $(BIN_DIR)/bt-scanner
 
 
@@ -27,6 +27,7 @@ test_bt_scanner:
 build_bt_scanner: test_bt_scanner
 
 	# Build obj files
+	$(CC) $(CFLAGS) -c src/bt-adapter.c -o $(OBJ_DIR)/src/bt-adapter.o
 	$(CC) $(CFLAGS) -c src/bt-scanner.c -o $(OBJ_DIR)/src/bt-scanner.o
 	$(CC) $(CFLAGS) -c main.c -o $(OBJ_DIR)/main.o
 

@@ -2,8 +2,7 @@
 
 int main()
 {
-//	struct btd_adapter* adapter = adapter_get_default();
-	struct btd_adapter* adapters = NULL;
+	struct btd_adapter* adapters;
 	uint16_t number_adapters;
 	int i;
 
@@ -14,15 +13,8 @@ int main()
 		adapter_print_information(adapters[i]);
 		adapter_cleanup(&adapters[i]);
 
-		printf("\n");
+		fprintf(stdout, "\n");
 	}
-	// show the information of each device
-//	hci_for_each_dev(HCI_UP, about_local_device, 0);
-
-//	adapter_cleanup(adapter);
-//	adapter_cleanup(adapter);
-//	adapter_cleanup(adapter);
-//	adapter_cleanup(adapter);
 
 	return 0;
 }
