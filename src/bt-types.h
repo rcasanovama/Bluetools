@@ -14,6 +14,8 @@ extern "C"
 #include <stdint.h>
 
 #include <bluetooth/bluetooth.h>
+#include <bluetooth/hci.h>
+#include <bluetooth/hci_lib.h>
 
 struct btd_adapter_name
 {

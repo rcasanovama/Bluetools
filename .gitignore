@@ -7,6 +7,10 @@ bt-adapter/bin/*
 bt-adapter/obj/*
 bt-adapter/src
 
+bt-utils/bin/*
+bt-utils/obj/*
+bt-utils/src
+
 .idea/*
 CMakeLists.txt
 cmake-build-debug/*
