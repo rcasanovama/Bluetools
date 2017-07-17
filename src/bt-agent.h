@@ -24,6 +24,10 @@ extern "C"
 #include <bluetooth/rfcomm.h>
 #include <bluetooth/l2cap.h>
 
+#include "bt-types.h"
+#include "bt-utils.h"
+#include "bt-adapter.h"
+
 int agent_init_rfcomm_server(uint8_t channel);
 
 int agent_init_rfcomm_client(uint8_t channel, char* address);

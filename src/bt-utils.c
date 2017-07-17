@@ -71,6 +71,30 @@ struct btd_adapter_class* str_to_adapter_class_t(char* _class)
 	return adapter_class;
 }
 
+struct btd_adapter_class* cls_to_adapter_class_t(uint8_t _cls[3])
+{
+	struct btd_adapter_class* adapter_class;
+	char dev_class[10];
+
+	adapter_class = (struct btd_adapter_class*) malloc(sizeof(struct btd_adapter_class));
+	if (! adapter_class)
+	{
+		return NULL;
+	}
+
+	adapter_class->cls[2] = _cls[2];
+	adapter_class->cls[1] = _cls[1];
+	adapter_class->cls[0] = _cls[0];
+
+	snprintf(dev_class, 10, "%02x%02x%02x", _cls[2], _cls[1], _cls[0]);
+	adapter_class->dev_class = (uint32_t) strtoul(dev_class, NULL, 16);
+
+	adapter_class->major_class = _cls[1] & ((uint8_t) 0x1f);
+	adapter_class->minor_class = _cls[0] >> 2;
+
+	return adapter_class;
+}
+
 struct btd_adapter_address* str_to_adapter_address_t(char* _address)
 {
 	struct btd_adapter_address* adapter_address;

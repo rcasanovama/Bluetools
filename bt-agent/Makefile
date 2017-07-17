@@ -11,7 +11,7 @@ CLIBS = -lbluetooth
 OBJ_DIR = obj
 BIN_DIR = bin
 
-OBJ_BT_AGENT = $(OBJ_DIR)/src/bt-utils.o $(OBJ_DIR)/src/bt-agent.o $(OBJ_DIR)/main.o
+OBJ_BT_AGENT = $(OBJ_DIR)/src/oui.o $(OBJ_DIR)/src/bdaddr.o $(OBJ_DIR)/src/bt-adapter.o $(OBJ_DIR)/src/bt-utils.o $(OBJ_DIR)/src/bt-agent.o $(OBJ_DIR)/main.o
 BIN_BT_AGENT = $(BIN_DIR)/bt-agent
 
 
@@ -27,6 +27,9 @@ test_bt_agent:
 build_bt_agent: test_bt_agent
 
 	# Build obj files
+	$(CC) $(CFLAGS) -c src/oui.c -o $(OBJ_DIR)/src/oui.o
+	$(CC) $(CFLAGS) -c src/bdaddr.c -o $(OBJ_DIR)/src/bdaddr.o
+	$(CC) $(CFLAGS) -c src/bt-adapter.c -o $(OBJ_DIR)/src/bt-adapter.o
 	$(CC) $(CFLAGS) -c src/bt-utils.c -o $(OBJ_DIR)/src/bt-utils.o
 	$(CC) $(CFLAGS) -c src/bt-agent.c -o $(OBJ_DIR)/src/bt-agent.o
 	$(CC) $(CFLAGS) -c main.c -o $(OBJ_DIR)/main.o
