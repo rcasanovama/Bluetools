@@ -8,7 +8,7 @@ int agent_init_rfcomm_server(uint8_t channel)
 {
 	struct sockaddr_rc local_addr, remote_addr;
 	socklen_t addr_len;
-	int fd, result;
+	int fd, client, result;
 
 	fd = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
 	if (fd < 0)
@@ -34,13 +34,13 @@ int agent_init_rfcomm_server(uint8_t channel)
 	}
 
 	addr_len = sizeof(remote_addr);
-	if ((result = accept(fd, (struct sockaddr*) &remote_addr, &addr_len)) < 0)
+	if ((client = accept(fd, (struct sockaddr*) &remote_addr, &addr_len)) < 0)
 	{
 		perror("rfcomm_accept");
-		return result; // -1
+		return client; // -1
 	}
 
-	return fd;
+	return client;
 }
 
 int agent_init_rfcomm_client(uint8_t channel, char* address)
@@ -72,7 +72,7 @@ int agent_init_l2cap_server(unsigned short l2_psm)
 {
 	struct sockaddr_l2 local_addr, remote_addr;
 	socklen_t addr_len;
-	int fd, result;
+	int fd, client, result;
 
 	fd = socket(AF_BLUETOOTH, SOCK_SEQPACKET, BTPROTO_L2CAP);
 	if (fd < 0)
@@ -99,13 +99,13 @@ int agent_init_l2cap_server(unsigned short l2_psm)
 	}
 
 	addr_len = sizeof(remote_addr);
-	if ((result = accept(fd, (struct sockaddr*) &remote_addr, &addr_len)) < 0)
+	if ((client = accept(fd, (struct sockaddr*) &remote_addr, &addr_len)) < 0)
 	{
 		perror("l2cap_accept");
-		return result; // -1
+		return client; // -1
 	}
 
-	return fd;
+	return client;
 }
 
 int agent_init_l2cap_client(unsigned short l2_psm, char* address)
