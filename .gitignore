@@ -7,6 +7,11 @@ bt-adapter/bin/*
 bt-adapter/obj/*
 bt-adapter/src
 
+bt-agent/bin/*
+bt-agent/obj/*
+bt-agent/src
+
+
 bt-utils/bin/*
 bt-utils/obj/*
 bt-utils/src
