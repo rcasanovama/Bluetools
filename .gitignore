@@ -11,10 +11,13 @@ bt-agent/bin/*
 bt-agent/obj/*
 bt-agent/src
 
-
 bt-utils/bin/*
 bt-utils/obj/*
 bt-utils/src
+
+bt-mitm/parser/shared
+bt-mitm/parser/lib
+bt-mitm/a.out
 
 .idea/*
 CMakeLists.txt
