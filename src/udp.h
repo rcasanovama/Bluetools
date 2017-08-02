@@ -56,9 +56,9 @@ extern int8_t init_networking();
 extern int8_t cleanup_networking();
 
 
-extern struct udp_socket_t* udp_socket(uint16_t __domain, uint16_t __protocol);
+extern struct udp_socket_t udp_client_socket(uint16_t __domain);
 
-extern int8_t udp_bind(struct udp_socket_t* __udp_socket_t, uint16_t __port);
+extern struct udp_socket_t udp_server_socket(uint16_t __domain, uint16_t __port);
 
 
 bool send_udp_message(int sock_fd, struct in_addr dst_address, unsigned short port, const char* buffer, unsigned int buffer_length);

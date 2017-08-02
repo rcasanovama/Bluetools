@@ -22,47 +22,18 @@ int8_t cleanup_networking()
 	return 0;
 }
 
-struct udp_socket_t* udp_socket(uint16_t __domain, uint16_t __protocol)
-{
-	struct udp_socket_t* __udp_socket_t;
-
-	__udp_socket_t = (struct udp_socket_t*) malloc(sizeof(struct udp_socket_t));
-	if (__udp_socket_t == NULL)
-	{
-#ifndef NOVERBOSE
-		perror("socket (m)");
-#endif
-		return NULL;
-	}
-
-	__udp_socket_t->fd = socket(__domain, SOCK_DGRAM, __protocol);
-#ifndef NOVERBOSE
-	if (__udp_socket_t->fd < 0)
-	{
-		perror("socket (s)");
-	}
-#endif
-
-	__udp_socket_t->domain = __domain;
-	__udp_socket_t->type = SOCK_DGRAM;
-	__udp_socket_t->protocol = __protocol;
-
-	return __udp_socket_t;
-}
-
-
-int8_t udp_bind(struct udp_socket_t* __udp_socket_t, uint16_t __port)
+static int8_t internal_udp_bind(struct udp_socket_t __udp_socket_t, uint16_t __port)
 {
 	struct sockaddr_in addr;
 	struct sockaddr_in6 addr6;
 	int r;
 
-	if (__udp_socket_t == NULL || __udp_socket_t->fd < 0)
+	if (__udp_socket_t.fd < 0)
 	{
 		return - 1;
 	}
 
-	switch (__udp_socket_t->domain)
+	switch (__udp_socket_t.domain)
 	{
 		case AF_INET:
 		{
@@ -70,9 +41,9 @@ int8_t udp_bind(struct udp_socket_t* __udp_socket_t, uint16_t __port)
 
 			addr.sin_family = AF_INET;
 			addr.sin_port = htons(__port);
-			addr.sin_addr.s_addr = INADDR_ANY;
+			addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-			r = bind(__udp_socket_t->fd, (struct sockaddr*) &addr, sizeof(addr));
+			r = bind(__udp_socket_t.fd, (struct sockaddr*) &addr, sizeof(addr));
 #ifndef NOVERBOSE
 			if (r < 0)
 			{
@@ -90,7 +61,7 @@ int8_t udp_bind(struct udp_socket_t* __udp_socket_t, uint16_t __port)
 			addr6.sin6_port = htons(__port);
 			addr6.sin6_addr = in6addr_any;
 
-			r = bind(__udp_socket_t->fd, (struct sockaddr*) &addr6, sizeof(addr6));
+			r = bind(__udp_socket_t.fd, (struct sockaddr*) &addr6, sizeof(addr6));
 #ifndef NOVERBOSE
 			if (r < 0)
 			{
@@ -109,10 +80,74 @@ int8_t udp_bind(struct udp_socket_t* __udp_socket_t, uint16_t __port)
 		}
 	}
 
-	__udp_socket_t->port = __port;
-
 	return r;
 }
+
+static struct udp_socket_t internal_udp_socket(uint16_t __domain)
+{
+	struct udp_socket_t __udp_socket_t;
+
+	memset(&__udp_socket_t, 0, sizeof(__udp_socket_t));
+
+	__udp_socket_t.fd = socket(__domain, SOCK_DGRAM, IPPROTO_UDP);
+#ifndef NOVERBOSE
+	if (__udp_socket_t.fd < 0)
+	{
+		perror("udp_socket");
+	}
+#endif
+
+	__udp_socket_t.domain = __domain;
+	__udp_socket_t.type = SOCK_DGRAM;
+	__udp_socket_t.protocol = IPPROTO_UDP;
+
+	return __udp_socket_t;
+}
+
+struct udp_socket_t udp_client_socket(uint16_t __domain)
+{
+	struct udp_socket_t __udp_socket_t;
+
+	// TODO: show error messages if internal_udp_socket fails
+	__udp_socket_t = internal_udp_socket(__domain);
+#ifndef NOVERBOSE
+	if (__udp_socket_t.fd < 0)
+	{
+//		fprintf(stderr, "client");
+	}
+#endif
+
+	return __udp_socket_t;
+}
+
+struct udp_socket_t udp_server_socket(uint16_t __domain, uint16_t __port)
+{
+	struct udp_socket_t __udp_socket_t;
+	int r;
+
+	// TODO: show error messages if internal_udp_socket fails
+	__udp_socket_t = internal_udp_socket(__domain);
+#ifndef NOVERBOSE
+	if (__udp_socket_t.fd < 0)
+	{
+//		fprintf(stderr, "server");
+	}
+#endif
+
+	__udp_socket_t.port = __port;
+
+	// TODO: show error messages if internal_udp_bind fails
+	r = internal_udp_bind(__udp_socket_t, __port);
+#ifndef NOVERBOSE
+	if (r < 0)
+	{
+//		fprintf(stderr, "server_bind");
+	}
+#endif
+
+	return __udp_socket_t;
+}
+
 
 bool send_udp_message(int sock_fd, struct in_addr dst_address, unsigned short port, const char* buffer, unsigned int buffer_length)
 {
