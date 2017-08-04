@@ -25,7 +25,7 @@ struct udp_socket_t
 	uint16_t type;
 	uint16_t protocol;
 
-	uint16_t port;
+//	uint16_t port;
 };
 
 extern struct udp_socket_t udp_client_socket(uint16_t __domain);

@@ -112,7 +112,7 @@ struct udp_socket_t udp_server_socket(uint16_t __domain, uint16_t __port)
 	}
 #endif
 
-	__udp_socket_t.port = __port;
+//	__udp_socket_t.port = __port;
 
 	// TODO: show error messages if internal_udp_bind fails
 	r = internal_udp_bind(__udp_socket_t, __port);
@@ -142,7 +142,7 @@ ssize_t udp_sendto(struct udp_socket_t __udp_socket_t, const char* __name, uint1
 
 	req.ai_family = AF_UNSPEC; // IPv4 | IPv6
 	req.ai_socktype = __udp_socket_t.type;
-	req.ai_protocol = IPPROTO_UDP;
+	req.ai_protocol = __udp_socket_t.protocol;
 	req.ai_flags |= AI_CANONNAME;
 
 	r = getaddrinfo(__name, NULL, &req, &pai);
@@ -270,7 +270,8 @@ int8_t udp_cleanup(struct udp_socket_t __udp_socket_t)
 {
 	int r;
 
-	r = shutdown(__udp_socket_t.fd, SHUT_RDWR);
+//	r = shutdown(__udp_socket_t.fd, SHUT_RDWR);
+	r = close(__udp_socket_t.fd);
 #ifndef NOVERBOSE
 	if (r < 0)
 	{
