@@ -1,27 +1,5 @@
 #include "udp.h"
 
-int8_t init_networking()
-{
-#ifdef _WIN32
-	WSADATA wsaData;
-	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
-	{
-		return - 1;
-	}
-#endif
-
-	return 0;
-}
-
-int8_t cleanup_networking()
-{
-#ifdef _WIN32
-	WSACleanup();
-#endif
-
-	return 0;
-}
-
 static int8_t internal_udp_bind(struct udp_socket_t __udp_socket_t, uint16_t __port)
 {
 	struct sockaddr_in addr;
@@ -148,62 +126,157 @@ struct udp_socket_t udp_server_socket(uint16_t __domain, uint16_t __port)
 	return __udp_socket_t;
 }
 
-
-bool send_udp_message(int sock_fd, struct in_addr dst_address, unsigned short port, const char* buffer, unsigned int buffer_length)
+ssize_t udp_sendto(struct udp_socket_t __udp_socket_t, const char* __name, uint16_t __port, const void* buf, size_t buflen)
 {
-	struct sockaddr_in dst_sockaddr;
+	socklen_t addrlen;
+	struct sockaddr* addr;
 
-	memset(&dst_sockaddr, 0, sizeof(dst_sockaddr));
+	struct sockaddr_in dest_addr;
+	struct sockaddr_in6 dest_addr6;
 
-	dst_sockaddr.sin_family = AF_INET;
-	dst_sockaddr.sin_port = htons(port);
-	dst_sockaddr.sin_addr = dst_address;
+	struct addrinfo req, * pai;
+	ssize_t send_len;
+	int r;
 
-	return sendto(sock_fd, buffer, buffer_length, 0, (struct sockaddr*) &dst_sockaddr, sizeof(dst_sockaddr)) >= 0;
-}
+	memset(&req, 0, sizeof(req));
 
-bool receive_udp_message(int sock_fd, unsigned int timeout, char* buffer, unsigned int buffer_length, int* received_length)
-{
-	struct sockaddr_in src_sockaddr;
+	req.ai_family = AF_UNSPEC; // IPv4 | IPv6
+	req.ai_socktype = __udp_socket_t.type;
+	req.ai_protocol = IPPROTO_UDP;
+	req.ai_flags |= AI_CANONNAME;
 
-#ifdef _WIN32
-	int src_sockaddr_length = sizeof(src_sockaddr);
-#else
-	unsigned int src_sockaddr_length = sizeof(src_sockaddr);
+	r = getaddrinfo(__name, NULL, &req, &pai);
+#ifndef NOVERBOSE
+	if (r != 0)
+	{
+		perror("getaddrinfo");
+	}
 #endif
 
-	fd_set set;
-	struct timeval time_value, * ptr_time_value;
-
-	FD_ZERO(&set);
-	FD_SET(sock_fd, &set);
-	if (timeout > 0)
+	send_len = - 1;
+	while (pai)
 	{
-		time_value.tv_sec = timeout / 1000;
-		time_value.tv_usec = 1000 * (timeout % 1000);
-		ptr_time_value = &time_value;
-	}
-	else
-	{
-		ptr_time_value = NULL;
+		switch (pai->ai_family)
+		{
+			case AF_INET:
+			{
+				memset(&dest_addr, 0, sizeof(struct sockaddr_in));
+
+				dest_addr.sin_family = __udp_socket_t.domain;
+				dest_addr.sin_port = htons(__port);
+				dest_addr.sin_addr = ((struct sockaddr_in*) pai->ai_addr)->sin_addr;
+
+				addr = (struct sockaddr*) &dest_addr;
+				addrlen = sizeof(struct sockaddr_in);
+
+				break;
+			}
+			case AF_INET6:
+			{
+				memset(&dest_addr6, 0, sizeof(struct sockaddr_in6));
+
+				dest_addr6.sin6_family = __udp_socket_t.domain;
+				dest_addr6.sin6_port = htons(__port);
+				dest_addr6.sin6_addr = ((struct sockaddr_in6*) pai->ai_addr)->sin6_addr;
+
+				addr = (struct sockaddr*) &dest_addr6;
+				addrlen = sizeof(struct sockaddr_in6);
+
+				break;
+			}
+			default:
+			{
+				addr = NULL;
+				addrlen = 0;
+
+				break;
+			}
+		}
+
+		if (addr != NULL)
+		{
+			send_len = sendto(__udp_socket_t.fd, buf, buflen, 0, addr, addrlen);
+			if (send_len < 0)
+			{
+#ifndef NOVERBOSE
+				perror("udp_sendto");
+#endif
+				freeaddrinfo(pai);
+
+				return send_len;
+			}
+		}
+
+		pai = pai->ai_next;
 	}
 
-	if (select(sock_fd + 1, &set, NULL, NULL, ptr_time_value) <= 0)
-	{
-		*received_length = 0;
-		return false;
-	}
+	freeaddrinfo(pai);
 
-	*received_length = recvfrom(sock_fd, buffer, buffer_length, 0, (struct sockaddr*) &src_sockaddr, &src_sockaddr_length);
-
-	return *received_length >= 0;
+	return send_len;
 }
 
-bool close_socket(int sock_fd)
+ssize_t udp_recvfrom(struct udp_socket_t __udp_socket_t, void* buf, size_t buflen)
 {
-#ifdef _WIN32
-	return closesocket(sock_fd) == 0;
-#else
-	return shutdown(sock_fd, SHUT_RDWR) == 0;
+	socklen_t addrlen;
+	struct sockaddr* addr;
+
+	struct sockaddr_in dest_addr;
+	struct sockaddr_in6 dest_addr6;
+
+	ssize_t recv_len;
+
+	recv_len = - 1;
+	switch (__udp_socket_t.domain)
+	{
+		case AF_INET:
+		{
+			memset(&dest_addr, 0, sizeof(struct sockaddr_in));
+
+			addr = (struct sockaddr*) &dest_addr;
+
+			break;
+		}
+		case AF_INET6:
+		{
+			memset(&dest_addr6, 0, sizeof(struct sockaddr_in6));
+
+			addr = (struct sockaddr*) &dest_addr6;
+
+			break;
+		}
+		default:
+		{
+			addr = NULL;
+
+			break;
+		}
+	}
+
+	if (addr != NULL)
+	{
+		recv_len = recvfrom(__udp_socket_t.fd, buf, buflen, 0, addr, &addrlen);
+#ifndef NOVERBOSE
+		if (recv_len < 0)
+		{
+			perror("udp_recvfrom");
+		}
 #endif
+	}
+
+	return recv_len;
+}
+
+int8_t udp_cleanup(struct udp_socket_t __udp_socket_t)
+{
+	int r;
+
+	r = shutdown(__udp_socket_t.fd, SHUT_RDWR);
+#ifndef NOVERBOSE
+	if (r < 0)
+	{
+		perror("udp_cleanup");
+	}
+#endif
+
+	return r;
 }
