@@ -424,14 +424,14 @@ struct btd_adapter_version* adapter_read_local_version(uint16_t dev_id)
 
 	adapter_version->ver = ver;
 	adapter_version->hci_ver = hci_vertostr(ver.hci_ver);
-	if (((dev_info.type & 0x30) >> 4) == HCI_BREDR)
-	{
+//	if (((dev_info.type & 0x30) >> 4) == HCI_BREDR)
+//	{
 		adapter_version->lmp_ver = lmp_vertostr(ver.lmp_ver);
-	}
-	else
-	{
-		adapter_version->lmp_ver = pal_vertostr(ver.lmp_ver);
-	}
+//	}
+//	else
+//	{
+//		adapter_version->lmp_ver = lmp_vertostr(ver.lmp_ver);
+//	}
 	adapter_version->type = dev_info.type;
 
 	return adapter_version;

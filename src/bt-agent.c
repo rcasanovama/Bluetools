@@ -70,40 +70,56 @@ int agent_init_rfcomm_client(uint8_t channel, char* address)
 
 int agent_init_l2cap_server(unsigned short l2_psm)
 {
-	struct sockaddr_l2 local_addr, remote_addr;
-	socklen_t addr_len;
-	int fd, client, result;
+	struct sockaddr_l2 addr;
+	struct sockaddr_l2 r_addr;
+	socklen_t r_addrlen;
+
+	int fd, client, r;
+
+	memset(&addr, 0, sizeof(addr));
 
 	fd = socket(AF_BLUETOOTH, SOCK_SEQPACKET, BTPROTO_L2CAP);
 	if (fd < 0)
 	{
+#ifndef NOVERBOSE
 		perror("l2cap_socket");
-		return fd; // -1
+#endif
+		return - 1;
 	}
 
-	local_addr.l2_family = AF_BLUETOOTH;
-	local_addr.l2_bdaddr = *BDADDR_ANY;
-	local_addr.l2_psm = htobs(l2_psm);
-//	local_addr.l2_psm = htobs(0x1001);
+	addr.l2_family = AF_BLUETOOTH;
+	addr.l2_psm = htobs(l2_psm);
+	addr.l2_bdaddr = htobs(*BDADDR_ANY);
 
-	if ((result = bind(fd, (struct sockaddr*) &local_addr, sizeof(local_addr))) < 0)
+	r = bind(fd, (struct sockaddr*) &addr, sizeof(addr));
+	if (r < 0)
 	{
+#ifndef NOVERBOSE
 		perror("l2cap_bind");
-		return result; // -1
+#endif
+		return - 1;
 	}
+	printf("bind ok\n");
 
-	if ((result = listen(fd, 1)) < 0)
+	r = listen(fd, 1);
+	if (r < 0)
 	{
+#ifndef NOVERBOSE
 		perror("l2cap_listen");
-		return result; // -1
+#endif
+		return - 1;
 	}
+	printf("listen ok\n");
 
-	addr_len = sizeof(remote_addr);
-	if ((client = accept(fd, (struct sockaddr*) &remote_addr, &addr_len)) < 0)
+	client = accept(fd, (struct sockaddr*) &r_addr, &r_addrlen);
+	if (client < 0)
 	{
+#ifndef NOVERBOSE
 		perror("l2cap_accept");
+#endif
 		return client; // -1
 	}
+	printf("accept ok\n");
 
 	return client;
 }
