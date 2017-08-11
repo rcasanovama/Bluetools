@@ -101,6 +101,7 @@ static struct l2cap_socket_t internal_l2cap_socket()
 struct l2cap_socket_t l2cap_client_socket(uint16_t dev_id, const char* __addr, uint8_t __psm)
 {
 	struct l2cap_socket_t __l2cap_socket_t;
+	int r;
 
 	__l2cap_socket_t = internal_l2cap_socket();
 	if (__l2cap_socket_t.fd < 0)
@@ -111,12 +112,14 @@ struct l2cap_socket_t l2cap_client_socket(uint16_t dev_id, const char* __addr, u
 
 	__l2cap_socket_t.dev_id = dev_id;
 
-	__l2cap_socket_t.rmt_fd = internal_l2cap_connect(__l2cap_socket_t, __addr, __psm);
-	if (__l2cap_socket_t.rmt_fd < 0)
+	r = internal_l2cap_connect(__l2cap_socket_t, __addr, __psm);
+	if (r < 0)
 	{
 		// error handling [...]
 		return __l2cap_socket_t;
 	}
+
+	__l2cap_socket_t.rmt_fd = __l2cap_socket_t.fd;
 
 	return __l2cap_socket_t;
 }
