@@ -111,32 +111,55 @@ extern "C"
 
 
 #pragma pack(1)
-struct obex_header_t
-{
-	uint8_t header_id;
-	uint16_t header_size;
-	uint8_t* header_value;
-
-	struct obex_header_t* next;
-};
-
 struct obex_packet_t
 {
 	uint8_t opcode;
 	uint16_t packet_length;
 
+	struct obex_packet_info_t* info;
+	struct obex_packet_header_t* headers;
+};
+
+struct obex_packet_info_t
+{
 	uint8_t version;
 	uint8_t flags;
 	uint16_t maximum_packet_length;
+};
 
-	struct obex_header_t* headers;
+struct obex_packet_header_t
+{
+	uint8_t header_id;
+	union
+	{
+		struct
+		{
+			uint64_t header_value;
+		} basic;
+
+		struct
+		{
+			uint16_t header_size;
+			uint8_t* header_value;
+		} extended;
+	};
+
+	struct obex_packet_header_t* next;
 };
 #pragma pack()
 
-#define OBEX_MINIMUM_PACKET_SIZE    (sizeof(struct obex_packet_t) - sizeof(struct obex_header_t*))
-#define OBEX_MINIMUM_HEADER_SIZE	(sizeof(uint8_t) + sizeof(uint16_t))
+#define OBEX_MINIMUM_PACKET_SIZE    (sizeof(uint8_t) + sizeof(uint16_t))
+#define OBEX_MAXIMUM_PACKET_SIZE    ((OBEX_MINIMUM_PACKET_SIZE) + sizeof(struct obex_packet_info_t))
+#define OBEX_MINIMUM_HEADER_SIZE    (sizeof(uint8_t) + sizeof(uint16_t))
+
+#define OFFSET_PACKET_LENGTH        (sizeof(uint8_t))
+#define OFFSET_MAX_PACKET_LENGTH    (sizeof(uint8_t) + sizeof(uint8_t))
+#define OFFSET_HEADER_LENGTH        (sizeof(uint8_t))
+#define OFFSET_HEADER_VALUE         (sizeof(uint8_t) + sizeof(uint16_t))
+
 
 #if defined(__cplusplus)
+
 }
 #endif
 
