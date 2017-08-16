@@ -24,6 +24,7 @@ uint16_t get_packet_size(struct obex_packet_t packet)
 
 				break;
 			}
+			case UNKNOWN_TYPE:
 			default:
 			{
 				break;
@@ -64,16 +65,16 @@ size_t packet_to_str(struct obex_packet_t obex_packet, void* buf, size_t buflen)
 	memcpy(buf, (const void*) &obex_packet.opcode, sizeof(uint8_t));
 	/* copy packet_length in big endian format */
 	be16_data = htobe16(obex_packet.packet_length);
-	memcpy(buf + OFFSET_PACKET_LENGTH, (const void*) &be16_data, sizeof(uint16_t));
+	memcpy(((unsigned char*) buf) + OFFSET_PACKET_LENGTH, (const void*) &be16_data, sizeof(uint16_t));
 
 	/* copy obex_packet_info_t if exists */
 	if (obex_packet.info != NULL)
 	{
 		/* copy version and flags */
-		memcpy(buf + OFFSET_PACKET_INFO, (const void*) &obex_packet.info, sizeof(uint8_t) + sizeof(uint8_t));
+		memcpy(((unsigned char*) buf) + OFFSET_PACKET_INFO, (const void*) &obex_packet.info, sizeof(uint8_t) + sizeof(uint8_t));
 		/* copy maximum_packet_length in big endian format */
 		be16_data = htobe16(obex_packet.info->maximum_packet_length);
-		memcpy(buf + OFFSET_PACKET_INFO + OFFSET_MAX_PACKET_LENGTH, (const void*) &be16_data, sizeof(uint16_t));
+		memcpy(((unsigned char*) buf) + OFFSET_PACKET_INFO + OFFSET_MAX_PACKET_LENGTH, (const void*) &be16_data, sizeof(uint16_t));
 	}
 
 	/* copy headers if exists */
@@ -83,7 +84,7 @@ size_t packet_to_str(struct obex_packet_t obex_packet, void* buf, size_t buflen)
 	while (it != NULL)
 	{
 		/* copy header_id */
-		memcpy(buf + offset, &it->header_id, sizeof(uint8_t));
+		memcpy(((unsigned char*) buf) + offset, &it->header_id, sizeof(uint8_t));
 
 		switch (it->header_type)
 		{
@@ -91,7 +92,7 @@ size_t packet_to_str(struct obex_packet_t obex_packet, void* buf, size_t buflen)
 			{
 				/* copy uint32_t header_value */
 				be32_data = htobe32(it->basic.header_value);
-				memcpy(buf + offset + sizeof(uint8_t), &be32_data, sizeof(uint32_t));
+				memcpy(((unsigned char*) buf) + offset + sizeof(uint8_t), &be32_data, sizeof(uint32_t));
 
 				offset += sizeof(uint8_t) + sizeof(uint32_t);
 
@@ -101,15 +102,16 @@ size_t packet_to_str(struct obex_packet_t obex_packet, void* buf, size_t buflen)
 			{
 				/* copy uint16_t header_size */
 				be16_data = htobe16(it->extended.header_size);
-				memcpy(buf + offset + sizeof(uint8_t), &be16_data, sizeof(uint16_t));
+				memcpy(((unsigned char*) buf) + offset + sizeof(uint8_t), &be16_data, sizeof(uint16_t));
 
 				/* copy uint8_t* header_value */
-				memcpy(buf + offset + sizeof(uint8_t) + sizeof(uint16_t), it->extended.header_value, it->extended.header_size - (sizeof(uint8_t) + sizeof(uint16_t)));
+				memcpy(((unsigned char*) buf) + offset + sizeof(uint8_t) + sizeof(uint16_t), it->extended.header_value, it->extended.header_size - (sizeof(uint8_t) + sizeof(uint16_t)));
 
 				offset += it->extended.header_size;
 
 				break;
 			}
+			case UNKNOWN_TYPE:
 			default:
 			{
 				break;
@@ -145,7 +147,7 @@ size_t str_to_packet(struct obex_packet_t* obex_packet, const void* buf, size_t 
 			obex_packet->info = (struct obex_packet_info_t*) malloc(sizeof(struct obex_packet_info_t));
 			assert(obex_packet->info != NULL);
 
-			memcpy(obex_packet->info, buf + OFFSET_PACKET_INFO, sizeof(struct obex_packet_info_t));
+			memcpy(obex_packet->info, ((unsigned char*) buf) + OFFSET_PACKET_INFO, sizeof(struct obex_packet_info_t));
 			obex_packet->info->maximum_packet_length = be16toh(obex_packet->info->maximum_packet_length);
 
 			break;
@@ -162,14 +164,14 @@ size_t str_to_packet(struct obex_packet_t* obex_packet, const void* buf, size_t 
 	while (offset < obex_packet->packet_length)
 	{
 		/* copy header_id */
-		memcpy(&header_id, buf + offset, sizeof(uint8_t));
+		memcpy(&header_id, ((unsigned char*) buf) + offset, sizeof(uint8_t));
 
 		switch (get_header_type(header_id))
 		{
 			case BASIC_TYPE:
 			{
 				/* copy header_value */
-				memcpy(&hdr32_value, buf + offset + sizeof(uint8_t), sizeof(uint32_t));
+				memcpy(&hdr32_value, ((unsigned char*) buf) + offset + sizeof(uint8_t), sizeof(uint32_t));
 				hdr32_value = be32toh(hdr32_value);
 
 				obex_packet->headers = build_basic_header(obex_packet->headers, header_id, hdr32_value);
@@ -180,7 +182,7 @@ size_t str_to_packet(struct obex_packet_t* obex_packet, const void* buf, size_t 
 			case EXTENDED_TYPE:
 			{
 				/* copy header_size */
-				memcpy(&hdr16_size, buf + offset + sizeof(uint8_t), sizeof(uint16_t));
+				memcpy(&hdr16_size, ((unsigned char*) buf) + offset + sizeof(uint8_t), sizeof(uint16_t));
 				hdr16_size = be16toh(hdr16_size);
 
 				/* copy header_value */
@@ -188,13 +190,14 @@ size_t str_to_packet(struct obex_packet_t* obex_packet, const void* buf, size_t 
 				hdr8_value = (uint8_t*) malloc(value_size * sizeof(uint8_t));
 				assert(hdr8_value != NULL);
 
-				memcpy(hdr8_value, buf + offset + sizeof(uint8_t) + sizeof(uint16_t), sizeof(uint8_t));
+				memcpy(hdr8_value, ((unsigned char*) buf) + offset + sizeof(uint8_t) + sizeof(uint16_t), sizeof(uint8_t));
 
 				obex_packet->headers = build_extended_header(obex_packet->headers, header_id, hdr8_value, value_size);
 				offset += sizeof(uint8_t) + sizeof(uint16_t) + value_size;
 
 				break;
 			}
+			case UNKNOWN_TYPE:
 			default:
 			{
 				break;

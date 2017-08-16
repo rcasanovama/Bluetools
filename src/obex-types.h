@@ -169,7 +169,7 @@ struct obex_packet_header_t
 #define OBEX_MINIMUM_PACKET_SIZE    (sizeof(uint8_t) + sizeof(uint16_t))
 #define OBEX_MAXIMUM_PACKET_SIZE    ((OBEX_MINIMUM_PACKET_SIZE) + sizeof(struct obex_packet_info_t))
 
-#define OFFSET_PACKET_INFO			(sizeof(uint8_t) + sizeof(uint16_t))
+#define OFFSET_PACKET_INFO          (sizeof(uint8_t) + sizeof(uint16_t))
 #define OFFSET_PACKET_LENGTH        (sizeof(uint8_t))
 #define OFFSET_MAX_PACKET_LENGTH    (sizeof(uint8_t) + sizeof(uint8_t))
 
