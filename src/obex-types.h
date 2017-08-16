@@ -134,7 +134,7 @@ struct obex_packet_header_t
 	{
 		struct
 		{
-			uint64_t header_value;
+			uint32_t header_value;
 		} basic;
 
 		struct
@@ -144,9 +144,17 @@ struct obex_packet_header_t
 		} extended;
 	};
 
+	enum HEADER_TYPES header_type;
+
 	struct obex_packet_header_t* next;
 };
 #pragma pack()
+
+enum HEADER_TYPES
+{
+	BASIC_TYPE,
+	EXTENDED_TYPE
+};
 
 #define OBEX_MINIMUM_PACKET_SIZE    (sizeof(uint8_t) + sizeof(uint16_t))
 #define OBEX_MAXIMUM_PACKET_SIZE    ((OBEX_MINIMUM_PACKET_SIZE) + sizeof(struct obex_packet_info_t))
