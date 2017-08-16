@@ -15,6 +15,10 @@ bt-utils/bin/*
 bt-utils/obj/*
 bt-utils/src
 
+dirtytooth/bin/*
+dirtytooth/obj/*
+dirtytooth/src
+
 bt-mitm/parser/shared
 bt-mitm/parser/lib
 bt-mitm/a.out
