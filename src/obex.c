@@ -109,7 +109,7 @@ struct obex_packet_t* obex_get(struct obex_t* obex, struct obex_packet_header_t*
 	request.headers = headers;
 
 	/* Request packet info */
-	request.info->NULL;
+	request.info = NULL;
 
 	/* Request packet */
 	request.opcode = OBEX_GET_FINAL;

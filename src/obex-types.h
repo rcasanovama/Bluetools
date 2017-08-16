@@ -110,6 +110,17 @@ extern "C"
 #define OBEX_MAXIMUM_MTU            65535
 
 
+/**
+ * Packet structs
+ */
+
+enum HEADER_TYPES
+{
+	BASIC_TYPE,
+	EXTENDED_TYPE,
+	UNKNOWN_TYPE
+};
+
 #pragma pack(1)
 struct obex_packet_t
 {
@@ -150,21 +161,17 @@ struct obex_packet_header_t
 };
 #pragma pack()
 
-enum HEADER_TYPES
-{
-	BASIC_TYPE,
-	EXTENDED_TYPE
-};
+
+/**
+ * Offsets and sizes
+ */
 
 #define OBEX_MINIMUM_PACKET_SIZE    (sizeof(uint8_t) + sizeof(uint16_t))
 #define OBEX_MAXIMUM_PACKET_SIZE    ((OBEX_MINIMUM_PACKET_SIZE) + sizeof(struct obex_packet_info_t))
-#define OBEX_MINIMUM_HEADER_SIZE    (sizeof(uint8_t) + sizeof(uint16_t))
 
+#define OFFSET_PACKET_INFO			(sizeof(uint8_t) + sizeof(uint16_t))
 #define OFFSET_PACKET_LENGTH        (sizeof(uint8_t))
 #define OFFSET_MAX_PACKET_LENGTH    (sizeof(uint8_t) + sizeof(uint8_t))
-#define OFFSET_HEADER_LENGTH        (sizeof(uint8_t))
-#define OFFSET_HEADER_VALUE         (sizeof(uint8_t) + sizeof(uint16_t))
-
 
 #if defined(__cplusplus)
 
