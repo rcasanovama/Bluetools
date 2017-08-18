@@ -15,7 +15,8 @@ int main()
 	headers = build_extended_header(NULL, OBEX_TARGET, UUID_PBAP, sizeof(UUID_PBAP));
 	obex_connect(&obex, headers);
 
-	// obex_disconnect(obex, NULL);
+	headers = build_basic_header(NULL, OBEX_CONNECTION_ID, obex.connection_id);
+	obex_disconnect(&obex, headers);
 
 	obex_cleanup(obex);
 

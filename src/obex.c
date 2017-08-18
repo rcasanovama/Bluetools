@@ -40,9 +40,14 @@ static ssize_t internal_obex_recv_packet(struct obex_t obex, struct obex_packet_
 		return - 1;
 	}
 
-	buflen = str_to_packet(*response, (const void*) buf, buflen);
+	/* check if packets are too big */
+	assert(recv_len < OBEX_MAXIMUM_MTU);
+
+	*response = (struct obex_packet_t*) malloc(sizeof(struct obex_packet_t));
+	assert(*response != NULL);
+
+	buflen = str_to_packet(*response, (const void*) buf, (size_t) recv_len);
 	assert(buflen == (*response)->packet_length);
-	assert(recv_len == (*response)->packet_length);
 
 	return recv_len;
 }

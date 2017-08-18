@@ -24,6 +24,8 @@ extern size_t packet_to_str(struct obex_packet_t obex_packet, void* buf, size_t 
 
 extern size_t str_to_packet(struct obex_packet_t* obex_packet, const void* buf, size_t buflen);
 
+extern uint8_t is_valid_header(uint8_t header_id);
+
 extern enum HEADER_TYPES get_header_type(uint8_t header_id);
 
 extern struct obex_packet_header_t* build_basic_header(struct obex_packet_header_t* headers, uint8_t header_id, uint32_t header_value);

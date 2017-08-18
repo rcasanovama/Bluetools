@@ -71,7 +71,7 @@ size_t packet_to_str(struct obex_packet_t obex_packet, void* buf, size_t buflen)
 	if (obex_packet.info != NULL)
 	{
 		/* copy version and flags */
-		memcpy(((unsigned char*) buf) + OFFSET_PACKET_INFO, (const void*) &obex_packet.info, sizeof(uint8_t) + sizeof(uint8_t));
+		memcpy(((unsigned char*) buf) + OFFSET_PACKET_INFO, (const void*) obex_packet.info, sizeof(uint8_t) + sizeof(uint8_t));
 		/* copy maximum_packet_length in big endian format */
 		be16_data = htobe16(obex_packet.info->maximum_packet_length);
 		memcpy(((unsigned char*) buf) + OFFSET_PACKET_INFO + OFFSET_MAX_PACKET_LENGTH, (const void*) &be16_data, sizeof(uint16_t));
@@ -138,74 +138,121 @@ size_t str_to_packet(struct obex_packet_t* obex_packet, const void* buf, size_t 
 	/* copy opcode and packet_length */
 	memcpy(obex_packet, buf, OBEX_MINIMUM_PACKET_SIZE);
 	obex_packet->packet_length = be16toh(obex_packet->packet_length);
+	assert(buflen == obex_packet->packet_length);
 
-	/* copy obex_packet_info_t if exists */
-	switch (obex_packet->opcode)
+	obex_packet->info = NULL;
+	obex_packet->headers = NULL;
+
+	if (obex_packet->packet_length > OBEX_MINIMUM_PACKET_SIZE)
 	{
-		case OBEX_CONNECT:
+		/* copy next byte to check if is an obex_packet_info_t or obex_packet_header_t */
+		memcpy(&header_id, ((unsigned char*) buf) + OBEX_MINIMUM_PACKET_SIZE, sizeof(uint8_t));
+
+		/* copy obex_packet_info_t if exists */
+		if (! is_valid_header(header_id))
 		{
 			obex_packet->info = (struct obex_packet_info_t*) malloc(sizeof(struct obex_packet_info_t));
 			assert(obex_packet->info != NULL);
 
 			memcpy(obex_packet->info, ((unsigned char*) buf) + OFFSET_PACKET_INFO, sizeof(struct obex_packet_info_t));
 			obex_packet->info->maximum_packet_length = be16toh(obex_packet->info->maximum_packet_length);
+		}
+
+		offset = (obex_packet->info == NULL) ? (OBEX_MINIMUM_PACKET_SIZE) : (OBEX_MAXIMUM_PACKET_SIZE);
+		while (offset < obex_packet->packet_length)
+		{
+			/* copy header_id */
+			memcpy(&header_id, ((unsigned char*) buf) + offset, sizeof(uint8_t));
+
+			switch (get_header_type(header_id))
+			{
+				case BASIC_TYPE:
+				{
+					/* copy header_value */
+					memcpy(&hdr32_value, ((unsigned char*) buf) + offset + sizeof(uint8_t), sizeof(uint32_t));
+					hdr32_value = be32toh(hdr32_value);
+
+					obex_packet->headers = build_basic_header(obex_packet->headers, header_id, hdr32_value);
+					offset += sizeof(uint8_t) + sizeof(uint32_t);
+
+					break;
+				}
+				case EXTENDED_TYPE:
+				{
+					/* copy header_size */
+					memcpy(&hdr16_size, ((unsigned char*) buf) + offset + sizeof(uint8_t), sizeof(uint16_t));
+					hdr16_size = be16toh(hdr16_size);
+
+					/* copy header_value */
+					value_size = hdr16_size - sizeof(uint8_t) - sizeof(uint16_t);
+					hdr8_value = (uint8_t*) malloc(value_size * sizeof(uint8_t));
+					assert(hdr8_value != NULL);
+
+					memcpy(hdr8_value, ((unsigned char*) buf) + offset + sizeof(uint8_t) + sizeof(uint16_t), sizeof(uint8_t));
+
+					obex_packet->headers = build_extended_header(obex_packet->headers, header_id, hdr8_value, value_size);
+					offset += sizeof(uint8_t) + sizeof(uint16_t) + value_size;
+
+					break;
+				}
+				case UNKNOWN_TYPE:
+				default:
+				{
+					// error handling [...]
+					offset = obex_packet->packet_length;
+
+					break;
+				}
+			}
+		}
+	}
+
+
+	return buflen;
+}
+
+uint8_t is_valid_header(uint8_t header_id)
+{
+	uint8_t is_valid;
+
+	switch (header_id)
+	{
+		case OBEX_EMPTY:
+		case OBEX_COUNT:
+		case OBEX_NAME:
+		case OBEX_TYPE:
+		case OBEX_LENGTH:
+		case OBEX_ISO_TIME:
+		case OBEX_COMPATIBILITY_TIME:
+		case OBEX_DESCRIPTION:
+		case OBEX_TARGET:
+		case OBEX_HTTP:
+		case OBEX_BODY:
+		case OBEX_BODY_END:
+		case OBEX_WHO:
+		case OBEX_CONNECTION_ID:
+		case OBEX_APP_PARAMETERS:
+		case OBEX_AUTH_CHALLENGE:
+		case OBEX_AUTH_RESPONSE:
+		case OBEX_CREATOR_ID:
+		case OBEX_WAN_UUID:
+		case OBEX_OBJECT_CLASS:
+		case OBEX_SESSION_PARAMETERS:
+		case OBEX_SESSION_SEQ_NUMBER:
+		{
+			is_valid = 1;
 
 			break;
 		}
 		default:
 		{
-			obex_packet->info = NULL;
+			is_valid = 0;
 
 			break;
 		}
 	}
 
-	offset = (obex_packet->info == NULL) ? (OBEX_MINIMUM_PACKET_SIZE) : (OBEX_MAXIMUM_PACKET_SIZE);
-	while (offset < obex_packet->packet_length)
-	{
-		/* copy header_id */
-		memcpy(&header_id, ((unsigned char*) buf) + offset, sizeof(uint8_t));
-
-		switch (get_header_type(header_id))
-		{
-			case BASIC_TYPE:
-			{
-				/* copy header_value */
-				memcpy(&hdr32_value, ((unsigned char*) buf) + offset + sizeof(uint8_t), sizeof(uint32_t));
-				hdr32_value = be32toh(hdr32_value);
-
-				obex_packet->headers = build_basic_header(obex_packet->headers, header_id, hdr32_value);
-				offset += sizeof(uint8_t) + sizeof(uint32_t);
-
-				break;
-			}
-			case EXTENDED_TYPE:
-			{
-				/* copy header_size */
-				memcpy(&hdr16_size, ((unsigned char*) buf) + offset + sizeof(uint8_t), sizeof(uint16_t));
-				hdr16_size = be16toh(hdr16_size);
-
-				/* copy header_value */
-				value_size = hdr16_size - sizeof(uint8_t) - sizeof(uint16_t);
-				hdr8_value = (uint8_t*) malloc(value_size * sizeof(uint8_t));
-				assert(hdr8_value != NULL);
-
-				memcpy(hdr8_value, ((unsigned char*) buf) + offset + sizeof(uint8_t) + sizeof(uint16_t), sizeof(uint8_t));
-
-				obex_packet->headers = build_extended_header(obex_packet->headers, header_id, hdr8_value, value_size);
-				offset += sizeof(uint8_t) + sizeof(uint16_t) + value_size;
-
-				break;
-			}
-			case UNKNOWN_TYPE:
-			default:
-			{
-				break;
-			}
-		}
-	}
-
-	return buflen;
+	return is_valid;
 }
 
 enum HEADER_TYPES get_header_type(uint8_t header_id)
