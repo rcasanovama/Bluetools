@@ -189,21 +189,24 @@ int8_t rfcomm_cleanup(struct rfcomm_socket_t __rfcomm_socket_t)
 {
 	int r;
 
-	r = shutdown(__rfcomm_socket_t.rmt_fd, SHUT_RDWR);
-#ifndef NOVERBOSE
-	if (r < 0)
+	if (__rfcomm_socket_t.rmt_fd != __rfcomm_socket_t.fd)
 	{
-		perror("rfcomm shutdown rfd");
-	}
+		r = shutdown(__rfcomm_socket_t.rmt_fd, SHUT_RDWR);
+#ifndef NOVERBOSE
+		if (r < 0)
+		{
+			perror("rfcomm shutdown rfd");
+		}
 #endif
 
-	r = close(__rfcomm_socket_t.rmt_fd);
+		r = close(__rfcomm_socket_t.rmt_fd);
 #ifndef NOVERBOSE
-	if (r < 0)
-	{
-		perror("rfcomm close rfd");
-	}
+		if (r < 0)
+		{
+			perror("rfcomm close rfd");
+		}
 #endif
+	}
 
 	r = shutdown(__rfcomm_socket_t.fd, SHUT_RDWR);
 #ifndef NOVERBOSE

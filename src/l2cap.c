@@ -189,21 +189,24 @@ int8_t l2cap_cleanup(struct l2cap_socket_t __l2cap_socket_t)
 {
 	int r;
 
-	r = shutdown(__l2cap_socket_t.rmt_fd, SHUT_RDWR);
-#ifndef NOVERBOSE
-	if (r < 0)
+	if (__l2cap_socket_t.rmt_fd != __l2cap_socket_t.fd)
 	{
-		perror("l2cap shutdown rfd");
-	}
+		r = shutdown(__l2cap_socket_t.rmt_fd, SHUT_RDWR);
+#ifndef NOVERBOSE
+		if (r < 0)
+		{
+			perror("l2cap shutdown rfd");
+		}
 #endif
 
-	r = close(__l2cap_socket_t.rmt_fd);
+		r = close(__l2cap_socket_t.rmt_fd);
 #ifndef NOVERBOSE
-	if (r < 0)
-	{
-		perror("l2cap close rfd");
-	}
+		if (r < 0)
+		{
+			perror("l2cap close rfd");
+		}
 #endif
+	}
 
 	r = shutdown(__l2cap_socket_t.fd, SHUT_RDWR);
 #ifndef NOVERBOSE
