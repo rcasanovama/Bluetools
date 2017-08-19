@@ -174,7 +174,6 @@ struct obex_packet_header_t
 #define OFFSET_MAX_PACKET_LENGTH    (sizeof(uint8_t) + sizeof(uint8_t))
 
 #if defined(__cplusplus)
-
 }
 #endif
 
