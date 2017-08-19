@@ -53,6 +53,40 @@ uint32_t get_connection_id(struct obex_packet_t packet)
 	return 0xFFFFFFFF;
 }
 
+struct obex_packet_header_t* get_body_header(struct obex_packet_t packet)
+{
+	struct obex_packet_header_t* it;
+
+	it = packet.headers;
+	while (it != NULL)
+	{
+		if (it->header_id == OBEX_BODY)
+		{
+			return it;
+		}
+		it = it->next;
+	}
+
+	return NULL;
+}
+
+struct obex_packet_header_t* get_body_end_header(struct obex_packet_t packet)
+{
+	struct obex_packet_header_t* it;
+
+	it = packet.headers;
+	while (it != NULL)
+	{
+		if (it->header_id == OBEX_BODY_END)
+		{
+			return it;
+		}
+		it = it->next;
+	}
+
+	return NULL;
+}
+
 size_t packet_to_str(struct obex_packet_t obex_packet, void* buf, size_t buflen)
 {
 	struct obex_packet_header_t* it;

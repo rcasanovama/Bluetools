@@ -20,6 +20,10 @@ extern uint16_t get_packet_size(struct obex_packet_t packet);
 
 extern uint32_t get_connection_id(struct obex_packet_t packet);
 
+extern struct obex_packet_header_t* get_body_header(struct obex_packet_t packet);
+
+extern struct obex_packet_header_t* get_body_end_header(struct obex_packet_t packet);
+
 extern size_t packet_to_str(struct obex_packet_t obex_packet, void* buf, size_t buflen);
 
 extern size_t str_to_packet(struct obex_packet_t* obex_packet, const void* buf, size_t buflen);
