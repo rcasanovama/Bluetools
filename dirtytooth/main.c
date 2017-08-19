@@ -14,6 +14,7 @@ int main()
 
 	headers = build_extended_header(NULL, OBEX_TARGET, UUID_PBAP, sizeof(UUID_PBAP));
 	obex_connect(&obex, headers);
+	destroy_headers(&headers);
 
 	/* pull phonebook */
 //	uint8_t pb[30] = {0x00, 0x74, 0x00, 0x65, 0x00, 0x6C, 0x00, 0x65, 0x00, 0x63, 0x00, 0x6F, 0x00, 0x6D, 0x00, 0x2F, 0x00, 0x70, 0x00, 0x62, 0x00, 0x2E, 0x00, 0x76, 0x00, 0x63, 0x00, 0x66, 0x00, 0x00};
@@ -33,6 +34,7 @@ int main()
 
 	headers = build_basic_header(NULL, OBEX_CONNECTION_ID, obex.connection_id);
 	obex_disconnect(&obex, headers);
+	destroy_headers(&headers);
 
 	obex_cleanup(obex);
 

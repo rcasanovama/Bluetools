@@ -345,6 +345,24 @@ struct obex_packet_header_t* build_extended_header(struct obex_packet_header_t* 
 	return (headers != NULL) ? (headers) : (header);
 }
 
+void destroy_headers(struct obex_packet_header_t** headers)
+{
+	struct obex_packet_header_t* it;
+
+	if (*headers != NULL)
+	{
+		it = *headers;
+		while (it->next != NULL)
+		{
+			it = it->next;
+			free(*headers);
+			*headers = it;
+		}
+		free(*headers);
+	}
+	*headers = NULL;
+}
+
 void display_obex_packet(struct obex_packet_t packet)
 {
 	void* buf;

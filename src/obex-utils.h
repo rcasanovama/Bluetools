@@ -32,6 +32,8 @@ extern struct obex_packet_header_t* build_basic_header(struct obex_packet_header
 
 extern struct obex_packet_header_t* build_extended_header(struct obex_packet_header_t* headers, uint8_t header_id, uint8_t* header_value, uint16_t value_size);
 
+extern void destroy_headers(struct obex_packet_header_t** headers);
+
 extern void display_obex_packet(struct obex_packet_t packet);
 
 extern void display_obex_packet_str(const void* buf, size_t buflen);
