@@ -222,7 +222,7 @@ size_t str_to_packet(struct obex_packet_t* obex_packet, const void* buf, size_t 
 					hdr8_value = (uint8_t*) malloc(value_size * sizeof(uint8_t));
 					assert(hdr8_value != NULL);
 
-					memcpy(hdr8_value, ((unsigned char*) buf) + offset + sizeof(uint8_t) + sizeof(uint16_t), sizeof(uint8_t));
+					memcpy(hdr8_value, ((unsigned char*) buf) + offset + sizeof(uint8_t) + sizeof(uint16_t), value_size);
 
 					obex_packet->headers = build_extended_header(obex_packet->headers, header_id, hdr8_value, value_size);
 					offset += sizeof(uint8_t) + sizeof(uint16_t) + value_size;
@@ -418,23 +418,29 @@ void display_obex_packet(struct obex_packet_t packet)
 	void* buf;
 	size_t buflen;
 
-	buf = malloc(sizeof(packet.packet_length));
-	assert(buf != NULL);
+	if (packet.packet_length > 0)
+	{
+		buf = malloc(packet.packet_length * sizeof(unsigned char));
+		assert(buf != NULL);
 
-	buflen = packet_to_str(packet, buf, packet.packet_length);
-	display_obex_packet_str(buf, buflen);
+		buflen = packet_to_str(packet, buf, packet.packet_length);
+		display_obex_packet_str(buf, buflen);
 
-	free(buf);
+		free(buf);
+	}
 }
 
 void display_obex_packet_str(const void* buf, size_t buflen)
 {
 	size_t i;
 
-	fprintf(stdout, "[0x%02zx] ", buflen);
-	for (i = 0; i < buflen; i ++)
+	if (buf != NULL && buflen > 0)
 	{
-		fprintf(stdout, "0x%02x ", ((unsigned char*) buf)[i]);
+		fprintf(stdout, "[0x%02zx] ", buflen);
+		for (i = 0; i < buflen; i ++)
+		{
+			fprintf(stdout, "0x%02x ", ((unsigned char*) buf)[i]);
+		}
+		fprintf(stdout, "\n\n");
 	}
-	fprintf(stdout, "\n\n");
 }

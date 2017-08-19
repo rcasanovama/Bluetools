@@ -1,45 +1,52 @@
-#include "src/obex.h"
+#include <stdio.h>
+
+#include "src/pbap-types.h"
 #include "src/pbap.h"
+
+void write_to_file(const void* filename, const void* buf, size_t buflen);
 
 int main()
 {
-	struct obex_t obex;
-	struct obex_packet_t* packet;
-	struct obex_packet_header_t* headers;
+	struct pbap_t pbap;
 
-	obex = obex_init(0, "00:00:00:00:00:00", 13);
-	if (obex.obex_status != OBEX_INIT_OK)
+	unsigned char* buf;
+	size_t buflen;
+
+	pbap = pbap_client(0, "00:00:00:00:00:00", 13);
+	if (pbap.pbap_status == PBAP_INIT_OK)
 	{
-		return 1;
+		/* pull phone book */
+		buflen = pbap_get(pbap, TELECOM_PB, sizeof(TELECOM_PB), XBT_PHONEBOOK, sizeof(XBT_PHONEBOOK), (void*) &buf);
+		write_to_file("pb.vcf", buf, buflen);
+
+		/* pull call history */
+		buflen = pbap_get(pbap, TELECOM_CCH, sizeof(TELECOM_CCH), XBT_PHONEBOOK, sizeof(XBT_PHONEBOOK), (void*) &buf);
+		write_to_file("cch.vcf", buf, buflen);
+
+		pbap_cleanup(pbap);
 	}
 
-	headers = build_extended_header(NULL, OBEX_TARGET, UUID_PBAP, sizeof(UUID_PBAP));
-	packet = obex_connect(&obex, headers);
-	destroy_headers(&headers);
-	destroy_packet(&packet);
-
-	/* pull phonebook */
-//	uint8_t pb[30] = {0x00, 0x74, 0x00, 0x65, 0x00, 0x6C, 0x00, 0x65, 0x00, 0x63, 0x00, 0x6F, 0x00, 0x6D, 0x00, 0x2F, 0x00, 0x70, 0x00, 0x62, 0x00, 0x2E, 0x00, 0x76, 0x00, 0x63, 0x00, 0x66, 0x00, 0x00};
-//	uint8_t type[15] = {0x78, 0x2d, 0x62, 0x74, 0x2f, 0x70, 0x68, 0x6f, 0x6e, 0x65, 0x62, 0x6f, 0x6f, 0x6b, 0x00};
-//	headers = build_basic_header(NULL, OBEX_CONNECTION_ID, obex.connection_id);
-//	headers = build_extended_header(headers, OBEX_NAME, pb, sizeof(pb));
-//	headers = build_extended_header(headers, OBEX_TYPE, type, sizeof(type));
-//	obex_get_final(&obex, headers);
-//	obex_get_final(&obex, NULL);
-//	obex_get_final(&obex, NULL);
-
-	/* pull call history */
-//	headers = build_basic_header(NULL, OBEX_CONNECTION_ID, obex.connection_id);
-//	headers = build_basic_header(headers, OBEX_CONNECTION_ID, obex.connection_id);
-//	headers = build_basic_header(headers, OBEX_CONNECTION_ID, obex.connection_id);
-//	obex_get(&obex, headers);
-
-	headers = build_basic_header(NULL, OBEX_CONNECTION_ID, obex.connection_id);
-	packet = obex_disconnect(&obex, headers);
-	destroy_headers(&headers);
-	destroy_packet(&packet);
-
-	obex_cleanup(obex);
-
 	return 0;
+}
+
+void write_to_file(const void* filename, const void* buf, size_t buflen)
+{
+	FILE* f;
+	size_t i;
+
+	f = fopen(filename, "wt");
+	if (f != NULL)
+	{
+		/* write buffer to the file */
+		for (i = 0; i < buflen; i ++)
+		{
+			fprintf(f, "%c", ((unsigned char*) buf)[i]);
+		}
+		/* close the file */
+		fclose(f);
+	}
+	else
+	{
+		perror("fopen");
+	}
 }
