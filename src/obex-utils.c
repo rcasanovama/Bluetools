@@ -359,8 +359,24 @@ void destroy_headers(struct obex_packet_header_t** headers)
 			*headers = it;
 		}
 		free(*headers);
+		*headers = NULL;
 	}
-	*headers = NULL;
+}
+
+void destroy_packet(struct obex_packet_t** packet)
+{
+	if (*packet != NULL)
+	{
+		if ((*packet)->info != NULL)
+		{
+			free((*packet)->info);
+		}
+		if ((*packet)->headers != NULL)
+		{
+			destroy_headers(&(*packet)->headers);
+		}
+		*packet = NULL;
+	}
 }
 
 void display_obex_packet(struct obex_packet_t packet)
