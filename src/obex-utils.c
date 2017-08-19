@@ -20,7 +20,7 @@ uint16_t get_packet_size(struct obex_packet_t packet)
 			}
 			case EXTENDED_TYPE:
 			{
-				packet_size += packet.headers->extended.header_size;
+				packet_size += it->extended.header_size;
 
 				break;
 			}
@@ -269,6 +269,10 @@ enum HEADER_TYPES get_header_type(uint8_t header_id)
 		}
 		case OBEX_TARGET:
 		case OBEX_WHO:
+		case OBEX_NAME:
+		case OBEX_TYPE:
+		case OBEX_BODY:
+		case OBEX_BODY_END:
 		{
 			header_type = EXTENDED_TYPE;
 
@@ -339,4 +343,30 @@ struct obex_packet_header_t* build_extended_header(struct obex_packet_header_t* 
 	}
 
 	return (headers != NULL) ? (headers) : (header);
+}
+
+void display_obex_packet(struct obex_packet_t packet)
+{
+	void* buf;
+	size_t buflen;
+
+	buf = malloc(sizeof(packet.packet_length));
+	assert(buf != NULL);
+
+	buflen = packet_to_str(packet, buf, packet.packet_length);
+	display_obex_packet_str(buf, buflen);
+
+	free(buf);
+}
+
+void display_obex_packet_str(const void* buf, size_t buflen)
+{
+	size_t i;
+
+	fprintf(stdout, "[0x%02zx] ", buflen);
+	for (i = 0; i < buflen; i ++)
+	{
+		fprintf(stdout, "0x%02x ", ((unsigned char*) buf)[i]);
+	}
+	fprintf(stdout, "\n\n");
 }

@@ -30,7 +30,11 @@ extern struct obex_packet_t* obex_connect(struct obex_t* obex, struct obex_packe
 
 extern struct obex_packet_t* obex_get(struct obex_t* obex, struct obex_packet_header_t* headers);
 
+extern struct obex_packet_t* obex_get_final(struct obex_t* obex, struct obex_packet_header_t* headers);
+
 extern struct obex_packet_t* obex_put(struct obex_t* obex, struct obex_packet_header_t* headers);
+
+extern struct obex_packet_t* obex_put_final(struct obex_t* obex, struct obex_packet_header_t* headers);
 
 extern struct obex_packet_t* obex_disconnect(struct obex_t* obex, struct obex_packet_header_t* headers);
 
