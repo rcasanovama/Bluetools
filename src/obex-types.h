@@ -108,6 +108,7 @@ extern "C"
 #define OBEX_DEFAULT_MTU            1024
 #define OBEX_MINIMUM_MTU            255
 #define OBEX_MAXIMUM_MTU            65535
+#define OBEX_CUSTOM_MTU             768
 
 
 /**

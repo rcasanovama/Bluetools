@@ -34,10 +34,10 @@ static ssize_t internal_obex_recv_packet(struct obex_t obex, struct obex_packet_
 	size_t buflen;
 	ssize_t recv_len;
 
-	buf = (unsigned char*) malloc((OBEX_MINIMUM_MTU + 1) * sizeof(unsigned char));
+	buf = (unsigned char*) malloc((OBEX_CUSTOM_MTU + 1) * sizeof(unsigned char));
 	assert(buf != NULL);
 
-	buflen = OBEX_MINIMUM_MTU;
+	buflen = OBEX_CUSTOM_MTU;
 
 	recv_len = rfcomm_recv(obex.rfcomm_socket, (void*) buf, buflen);
 	if (recv_len < 0)
@@ -47,7 +47,7 @@ static ssize_t internal_obex_recv_packet(struct obex_t obex, struct obex_packet_
 	}
 
 	/* check if packets are too big */
-	assert(recv_len < OBEX_MINIMUM_MTU + 1);
+	assert(recv_len < OBEX_CUSTOM_MTU + 1);
 
 #ifndef NOVERBOSE
 	display_obex_packet_str((const void*) buf, (size_t) recv_len);
@@ -90,7 +90,7 @@ struct obex_packet_t* obex_connect(struct obex_t* obex, struct obex_packet_heade
 
 	request.info->version = 0x10;
 	request.info->flags = 0x00;
-	request.info->maximum_packet_length = OBEX_MINIMUM_MTU;
+	request.info->maximum_packet_length = OBEX_CUSTOM_MTU;
 
 	/* Request packet */
 	request.opcode = OBEX_CONNECT;
