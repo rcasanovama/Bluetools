@@ -28,7 +28,7 @@ extern struct pbap_t pbap_client(uint16_t dev_id, const char* __addr, uint8_t __
 
 extern size_t pbap_get(struct pbap_t pbap, uint8_t* name, uint16_t name_size, uint8_t* type, uint16_t type_size, void** buf);
 
-extern int8_t pbap_cleanup(struct pbap_t pbap);
+extern void pbap_cleanup(struct pbap_t pbap);
 
 #if defined(__cplusplus)
 }

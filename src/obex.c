@@ -267,7 +267,7 @@ struct obex_packet_t* obex_disconnect(struct obex_t* obex, struct obex_packet_he
 	return response;
 }
 
-int8_t obex_cleanup(struct obex_t obex)
+void obex_cleanup(struct obex_t obex)
 {
-	return rfcomm_cleanup(obex.rfcomm_socket);
+	rfcomm_cleanup(obex.rfcomm_socket);
 }

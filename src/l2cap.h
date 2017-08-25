@@ -41,7 +41,7 @@ extern ssize_t l2cap_send(struct l2cap_socket_t __l2cap_socket_t, const void* bu
 
 extern ssize_t l2cap_recv(struct l2cap_socket_t __l2cap_socket_t, void* buf, size_t buflen);
 
-extern int8_t l2cap_cleanup(struct l2cap_socket_t __l2cap_socket_t);
+extern void l2cap_cleanup(struct l2cap_socket_t __l2cap_socket_t);
 
 #if defined(__cplusplus)
 }

@@ -38,7 +38,7 @@ extern struct obex_packet_t* obex_put_final(struct obex_t* obex, struct obex_pac
 
 extern struct obex_packet_t* obex_disconnect(struct obex_t* obex, struct obex_packet_header_t* headers);
 
-extern int8_t obex_cleanup(struct obex_t obex);
+extern void obex_cleanup(struct obex_t obex);
 
 #if defined(__cplusplus)
 }

@@ -41,7 +41,7 @@ extern ssize_t rfcomm_send(struct rfcomm_socket_t __rfcomm_socket_t, const void*
 
 extern ssize_t rfcomm_recv(struct rfcomm_socket_t __rfcomm_socket_t, void* buf, size_t buflen);
 
-extern int8_t rfcomm_cleanup(struct rfcomm_socket_t __rfcomm_socket_t);
+extern void rfcomm_cleanup(struct rfcomm_socket_t __rfcomm_socket_t);
 
 #if defined(__cplusplus)
 }

@@ -36,7 +36,7 @@ extern ssize_t udp_sendto(struct udp_socket_t __udp_socket_t, const char* __name
 
 extern ssize_t udp_recvfrom(struct udp_socket_t __udp_socket_t, void* buf, size_t buflen);
 
-extern int8_t udp_cleanup(struct udp_socket_t __udp_socket_t);
+extern void udp_cleanup(struct udp_socket_t __udp_socket_t);
 
 #if defined(__cplusplus)
 }

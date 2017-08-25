@@ -82,7 +82,7 @@ size_t pbap_get(struct pbap_t pbap, uint8_t* name, uint16_t name_size, uint8_t* 
 	return buflen;
 }
 
-int8_t pbap_cleanup(struct pbap_t pbap)
+void pbap_cleanup(struct pbap_t pbap)
 {
 	struct obex_packet_header_t* headers;
 	struct obex_packet_t* packet;
@@ -94,5 +94,5 @@ int8_t pbap_cleanup(struct pbap_t pbap)
 	destroy_headers(&headers);
 	destroy_packet(&packet);
 
-	return obex_cleanup(pbap.obex);
+	obex_cleanup(pbap.obex);
 }

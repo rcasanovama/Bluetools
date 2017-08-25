@@ -210,7 +210,7 @@ ssize_t rfcomm_recv(struct rfcomm_socket_t __rfcomm_socket_t, void* buf, size_t 
 	return recv_len;
 }
 
-int8_t rfcomm_cleanup(struct rfcomm_socket_t __rfcomm_socket_t)
+void rfcomm_cleanup(struct rfcomm_socket_t __rfcomm_socket_t)
 {
 	int r;
 
@@ -248,6 +248,4 @@ int8_t rfcomm_cleanup(struct rfcomm_socket_t __rfcomm_socket_t)
 		perror("rfcomm close fd");
 	}
 #endif
-
-	return r;
 }

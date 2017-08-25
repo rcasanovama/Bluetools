@@ -266,7 +266,7 @@ ssize_t udp_recvfrom(struct udp_socket_t __udp_socket_t, void* buf, size_t bufle
 	return recv_len;
 }
 
-int8_t udp_cleanup(struct udp_socket_t __udp_socket_t)
+void udp_cleanup(struct udp_socket_t __udp_socket_t)
 {
 	int r;
 
@@ -278,6 +278,4 @@ int8_t udp_cleanup(struct udp_socket_t __udp_socket_t)
 		perror("udp_cleanup");
 	}
 #endif
-
-	return r;
 }

@@ -210,7 +210,7 @@ ssize_t l2cap_recv(struct l2cap_socket_t __l2cap_socket_t, void* buf, size_t buf
 	return recv_len;
 }
 
-int8_t l2cap_cleanup(struct l2cap_socket_t __l2cap_socket_t)
+void l2cap_cleanup(struct l2cap_socket_t __l2cap_socket_t)
 {
 	int r;
 
@@ -248,6 +248,4 @@ int8_t l2cap_cleanup(struct l2cap_socket_t __l2cap_socket_t)
 		perror("l2cap close fd");
 	}
 #endif
-
-	return r;
 }
