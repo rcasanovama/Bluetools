@@ -1,5 +1,26 @@
 #include "l2cap.h"
 
+static void internal_l2cap_cleanup_fd(struct l2cap_socket_t __l2cap_socket_t)
+{
+	int r;
+
+	r = shutdown(__l2cap_socket_t.fd, SHUT_RDWR);
+#ifndef NOVERBOSE
+	if (r < 0)
+	{
+		perror("l2cap_shutdown_fd");
+	}
+#endif
+
+	r = close(__l2cap_socket_t.fd);
+#ifndef NOVERBOSE
+	if (r < 0)
+	{
+		perror("l2cap_close_fd");
+	}
+#endif
+}
+
 static int32_t internal_l2cap_connect(struct l2cap_socket_t __l2cap_socket_t, const char* __addr, uint8_t __psm)
 {
 	struct sockaddr_l2 addr;
@@ -106,7 +127,6 @@ struct l2cap_socket_t l2cap_client_socket(uint16_t dev_id, const char* __addr, u
 	__l2cap_socket_t = internal_l2cap_socket();
 	if (__l2cap_socket_t.fd < 0)
 	{
-		// error handling [...]
 		return __l2cap_socket_t;
 	}
 
@@ -115,7 +135,9 @@ struct l2cap_socket_t l2cap_client_socket(uint16_t dev_id, const char* __addr, u
 	r = internal_l2cap_connect(__l2cap_socket_t, __addr, __psm);
 	if (r < 0)
 	{
-		// error handling [...]
+		internal_l2cap_cleanup_fd(__l2cap_socket_t);
+		__l2cap_socket_t.fd = - 1;
+
 		return __l2cap_socket_t;
 	}
 
@@ -132,7 +154,6 @@ struct l2cap_socket_t l2cap_server_socket(uint16_t dev_id, uint8_t __psm, uint8_
 	__l2cap_socket_t = internal_l2cap_socket();
 	if (__l2cap_socket_t.fd < 0)
 	{
-		// error handling [...]
 		return __l2cap_socket_t;
 	}
 
@@ -141,14 +162,18 @@ struct l2cap_socket_t l2cap_server_socket(uint16_t dev_id, uint8_t __psm, uint8_
 	r = internal_l2cap_bind(__l2cap_socket_t, __psm);
 	if (r < 0)
 	{
-		// error handling [...]
+		internal_l2cap_cleanup_fd(__l2cap_socket_t);
+		__l2cap_socket_t.fd = - 1;
+
 		return __l2cap_socket_t;
 	}
 
 	__l2cap_socket_t.rmt_fd = internal_l2cap_accept(__l2cap_socket_t, __connections);
 	if (__l2cap_socket_t.rmt_fd < 0)
 	{
-		// error handling [...]
+		internal_l2cap_cleanup_fd(__l2cap_socket_t);
+		__l2cap_socket_t.fd = - 1;
+
 		return __l2cap_socket_t;
 	}
 

@@ -1,5 +1,26 @@
 #include "rfcomm.h"
 
+static void internal_rfcomm_cleanup_fd(struct rfcomm_socket_t __rfcomm_socket_t)
+{
+	int r;
+
+	r = shutdown(__rfcomm_socket_t.fd, SHUT_RDWR);
+#ifndef NOVERBOSE
+	if (r < 0)
+	{
+		perror("rfcomm_shutdown_fd");
+	}
+#endif
+
+	r = close(__rfcomm_socket_t.fd);
+#ifndef NOVERBOSE
+	if (r < 0)
+	{
+		perror("rfcomm_close_fd");
+	}
+#endif
+}
+
 static int32_t internal_rfcomm_connect(struct rfcomm_socket_t __rfcomm_socket_t, const char* __addr, uint8_t __channel)
 {
 	struct sockaddr_rc addr;
@@ -106,7 +127,6 @@ struct rfcomm_socket_t rfcomm_client_socket(uint16_t dev_id, const char* __addr,
 	__rfcomm_socket_t = internal_rfcomm_socket();
 	if (__rfcomm_socket_t.fd < 0)
 	{
-		// error handling [...]
 		return __rfcomm_socket_t;
 	}
 
@@ -115,7 +135,9 @@ struct rfcomm_socket_t rfcomm_client_socket(uint16_t dev_id, const char* __addr,
 	r = internal_rfcomm_connect(__rfcomm_socket_t, __addr, __channel);
 	if (r < 0)
 	{
-		// error handling [...]
+		internal_rfcomm_cleanup_fd(__rfcomm_socket_t);
+		__rfcomm_socket_t.fd = - 1;
+
 		return __rfcomm_socket_t;
 	}
 
@@ -132,7 +154,6 @@ struct rfcomm_socket_t rfcomm_server_socket(uint16_t dev_id, uint8_t __channel, 
 	__rfcomm_socket_t = internal_rfcomm_socket();
 	if (__rfcomm_socket_t.fd < 0)
 	{
-		// error handling [...]
 		return __rfcomm_socket_t;
 	}
 
@@ -141,14 +162,18 @@ struct rfcomm_socket_t rfcomm_server_socket(uint16_t dev_id, uint8_t __channel, 
 	r = internal_rfcomm_bind(__rfcomm_socket_t, __channel);
 	if (r < 0)
 	{
-		// error handling [...]
+		internal_rfcomm_cleanup_fd(__rfcomm_socket_t);
+		__rfcomm_socket_t.fd = - 1;
+
 		return __rfcomm_socket_t;
 	}
 
 	__rfcomm_socket_t.rmt_fd = internal_rfcomm_accept(__rfcomm_socket_t, __connections);
 	if (__rfcomm_socket_t.rmt_fd < 0)
 	{
-		// error handling [...]
+		internal_rfcomm_cleanup_fd(__rfcomm_socket_t);
+		__rfcomm_socket_t.fd = - 1;
+
 		return __rfcomm_socket_t;
 	}
 
