@@ -28,43 +28,152 @@ extern "C"
 
 #include "bt-types.h"
 
-struct btd_adapter* adapter_get_default(void);
+/**
+ * Gets the default bluetooth adapter.
+ *
+ * @return default bluetooth adapter
+ */
+extern struct btd_adapter* adapter_get_default(void);
 
-struct btd_adapter* adapter_find_by_id(uint16_t dev_id);
+/**
+ * Finds the adapter identified by dev_id.
+ *
+ * @param dev_id identifier of the adapter
+ * @return adapter or null if not exists
+ */
+extern struct btd_adapter* adapter_find_by_id(uint16_t dev_id);
 
-uint16_t adapter_get_all(struct btd_adapter** adapters);
+/**
+ * Gets all bluetooth adapters.
+ *
+ * @param adapters list of adapters
+ * @return number of adapters in the list
+ */
+extern uint16_t adapter_get_all(struct btd_adapter** adapters);
 
-uint16_t adapter_get_index(struct btd_adapter adapter);
+/**
+ * Gets the index of the specified adapter.
+ *
+ * @param adapter bluetooth adapter
+ * @return index of the adapter
+ */
+extern uint16_t adapter_get_index(struct btd_adapter adapter);
 
-void adapter_print_information(struct btd_adapter adapter);
+/**
+ * Prints the information of the bluetooth adapter.
+ *
+ * @param adapter bluetooth adapter
+ */
+extern void adapter_print_information(struct btd_adapter adapter);
 
-struct btd_adapter_name* adapter_read_local_name(uint16_t dev_id);
+/**
+ * Reads the local name of the bluetooth adapter identified by dev_id.
+ *
+ * @param dev_id identifier of the adapter
+ * @return name as btd_adapter_name format
+ */
+extern struct btd_adapter_name* adapter_read_local_name(uint16_t dev_id);
 
-bool adapter_write_local_name(uint16_t dev_id, struct btd_adapter_name adapter_name);
+/**
+ * Writes the local name of the bluetooth adapter.
+ *
+ * @param dev_id identifier of the adapter
+ * @param adapter_name new name of the adapter
+ * @return true on success, false otherwise
+ */
+extern bool adapter_write_local_name(uint16_t dev_id, struct btd_adapter_name adapter_name);
 
-void adapter_print_name(struct btd_adapter_name adapter_name);
+/**
+ * Prints the local name of the bluetooth adapter.
+ *
+ * @param adapter_name name of the bluetooth adapter
+ */
+extern void adapter_print_name(struct btd_adapter_name adapter_name);
 
-struct btd_adapter_class* adapter_read_local_class(uint16_t dev_id);
+/**
+ * Reads the local class of the bluetooth adapter identified by dev_id.
+ *
+ * @param dev_id identifier of the adapter
+ * @return class as btd_adapter_class format
+ */
+extern struct btd_adapter_class* adapter_read_local_class(uint16_t dev_id);
 
-bool adapter_write_local_class(uint16_t dev_id, struct btd_adapter_class adapter_class);
+/**
+ * Writes the local class of the bluetooth adapter.
+ *
+ * @param dev_id identifier of the adapter
+ * @param adapter_class new class of the adapter
+ * @return true on success, false otherwise
+ */
+extern bool adapter_write_local_class(uint16_t dev_id, struct btd_adapter_class adapter_class);
 
-void adapter_print_class(struct btd_adapter_class adapter_class);
+/**
+ * Prints the local class of the bluetooth adapter.
+ *
+ * @param adapter_class class of the bluetooth adapter
+ */
+extern void adapter_print_class(struct btd_adapter_class adapter_class);
 
-struct btd_adapter_address* adapter_read_local_address(uint16_t dev_id);
+/**
+ * Reads the local address of the bluetooth adapter identified by dev_id.
+ *
+ * @param dev_id identifier of the adapter
+ * @return address as btd_adapter_address format
+ */
+extern struct btd_adapter_address* adapter_read_local_address(uint16_t dev_id);
 
-bool adapter_write_local_address(uint16_t dev_id, struct btd_adapter_address adapter_address);
+/**
+ * Writes the local address of the bluetooth adapter.
+ *
+ * @param dev_id identifier of the adapter
+ * @param adapter_address new address of the adapter
+ * @return true on success, false otherwise
+ */
+extern bool adapter_write_local_address(uint16_t dev_id, struct btd_adapter_address adapter_address);
 
-void adapter_print_address(struct btd_adapter_address adapter_address);
+/**
+ * Prints the local address of the bluetooth adapter.
+ *
+ * @param adapter_address address of the bluetooth adapter
+ */
+extern void adapter_print_address(struct btd_adapter_address adapter_address);
 
-struct btd_adapter_version* adapter_read_local_version(uint16_t dev_id);
+/**
+ * Reads the local version of the bluetooth adapter identified by dev_id.
+ *
+ * @param dev_id identifier of the adapter
+ * @return version as btd_adapter_version format
+ */
+extern struct btd_adapter_version* adapter_read_local_version(uint16_t dev_id);
 
-void adapter_print_version(struct btd_adapter_version adapter_version);
+/**
+ * Prints the local version of the bluetooth adapter.
+ *
+ * @param adapter_version version of the bluetooth adapter
+ */
+extern void adapter_print_version(struct btd_adapter_version adapter_version);
 
-uint8_t adapter_read_local_afh_mode(uint16_t dev_id);
+/**
+ * Reads the afh mode of the bluetooth adapter identified by dev_id.
+ *
+ * @param dev_id identifier of the adapter
+ * @return afh mode of the bluetooth adapter
+ */
+extern uint8_t adapter_read_local_afh_mode(uint16_t dev_id);
 
-void adapter_print_afh_mode(uint8_t afh_mode);
+/**
+ * Prints the afh mode of the bluetooth adapter.
+ *
+ * @param afh_mode afh mode of the bluetooth adapter
+ */
+extern void adapter_print_afh_mode(uint8_t afh_mode);
 
-void adapter_cleanup(struct btd_adapter* adapter);
+/**
+ * Cleans the bluetooth adapter.
+ *
+ * @param adapter bluetooth adapter
+ */
+extern void adapter_cleanup(struct btd_adapter* adapter);
 
 #ifdef __cplusplus
 }

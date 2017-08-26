@@ -1,10 +1,15 @@
 #include "rfcomm.h"
 
-static void internal_rfcomm_cleanup_fd(struct rfcomm_socket_t __rfcomm_socket_t)
+/**
+ * Internal function to clean the local rfcomm socket.
+ *
+ * @param rfcomm_socket handler of the rfcomm connection
+ */
+static void internal_rfcomm_cleanup_fd(struct rfcomm_socket_t rfcomm_socket)
 {
 	int r;
 
-	r = shutdown(__rfcomm_socket_t.fd, SHUT_RDWR);
+	r = shutdown(rfcomm_socket.fd, SHUT_RDWR);
 #ifndef NOVERBOSE
 	if (r < 0)
 	{
@@ -12,7 +17,7 @@ static void internal_rfcomm_cleanup_fd(struct rfcomm_socket_t __rfcomm_socket_t)
 	}
 #endif
 
-	r = close(__rfcomm_socket_t.fd);
+	r = close(rfcomm_socket.fd);
 #ifndef NOVERBOSE
 	if (r < 0)
 	{
@@ -21,16 +26,24 @@ static void internal_rfcomm_cleanup_fd(struct rfcomm_socket_t __rfcomm_socket_t)
 #endif
 }
 
-static int32_t internal_rfcomm_connect(struct rfcomm_socket_t __rfcomm_socket_t, const char* __addr, uint8_t __channel)
+/**
+ * Internal function to connect to remote device.
+ *
+ * @param rfcomm_socket handler of the rfcomm connection
+ * @param addr address of the remote device
+ * @param channel channel of the remote rfcomm server
+ * @return status code, -1 if error
+ */
+static int32_t internal_rfcomm_connect(struct rfcomm_socket_t rfcomm_socket, const char* addr, uint8_t channel)
 {
-	struct sockaddr_rc addr;
+	struct sockaddr_rc sockaddr;
 	int r;
 
-	addr.rc_family = AF_BLUETOOTH;
-	addr.rc_channel = __channel;
-	str2ba(__addr, &addr.rc_bdaddr);
+	sockaddr.rc_family = AF_BLUETOOTH;
+	sockaddr.rc_channel = channel;
+	str2ba(addr, &sockaddr.rc_bdaddr);
 
-	r = connect(__rfcomm_socket_t.fd, (struct sockaddr*) &addr, sizeof(addr));
+	r = connect(rfcomm_socket.fd, (struct sockaddr*) &sockaddr, sizeof(sockaddr));
 #ifndef NOVERBOSE
 	if (r < 0)
 	{
@@ -41,13 +54,20 @@ static int32_t internal_rfcomm_connect(struct rfcomm_socket_t __rfcomm_socket_t,
 	return r;
 }
 
-static int32_t internal_rfcomm_accept(struct rfcomm_socket_t __rfcomm_socket_t, uint8_t __connections)
+/**
+ * Internal function to accept incoming remote connections.
+ *
+ * @param rfcomm_socket handler of the rfcomm connection
+ * @param connections number of incoming connection which will be accepted
+ * @return file descriptor of the remote connection
+ */
+static int32_t internal_rfcomm_accept(struct rfcomm_socket_t rfcomm_socket, uint8_t connections)
 {
 	struct sockaddr_rc addr;
 	socklen_t addrlen;
 	int r;
 
-	r = listen(__rfcomm_socket_t.fd, (__connections == 0) ? (1) : (__connections));
+	r = listen(rfcomm_socket.fd, (connections == 0) ? (1) : (connections));
 	if (r < 0)
 	{
 #ifndef NOVERBOSE
@@ -56,7 +76,7 @@ static int32_t internal_rfcomm_accept(struct rfcomm_socket_t __rfcomm_socket_t, 
 		return r;
 	}
 
-	r = accept(__rfcomm_socket_t.fd, (struct sockaddr*) &addr, &addrlen);
+	r = accept(rfcomm_socket.fd, (struct sockaddr*) &addr, &addrlen);
 #ifndef NOVERBOSE
 	if (r < 0)
 	{
@@ -68,18 +88,25 @@ static int32_t internal_rfcomm_accept(struct rfcomm_socket_t __rfcomm_socket_t, 
 
 }
 
-static int8_t internal_rfcomm_bind(struct rfcomm_socket_t __rfcomm_socket_t, uint8_t __channel)
+/**
+ * Internal function to bind the local address to a channel.
+ *
+ * @param rfcomm_socket handler of the rfcomm connection
+ * @param channel channel for listening incoming remote connections
+ * @return status code, -1 if error
+ */
+static int8_t internal_rfcomm_bind(struct rfcomm_socket_t rfcomm_socket, uint8_t channel)
 {
 	struct hci_dev_info dev_info;
 	struct sockaddr_rc addr;
 	int r;
 
-	if (__rfcomm_socket_t.fd < 0)
+	if (rfcomm_socket.fd < 0)
 	{
 		return - 1;
 	}
 
-	if (hci_devinfo(__rfcomm_socket_t.dev_id, &dev_info) < 0)
+	if (hci_devinfo(rfcomm_socket.dev_id, &dev_info) < 0)
 	{
 		perror("hci_devinfo");
 		return - 1;
@@ -88,10 +115,10 @@ static int8_t internal_rfcomm_bind(struct rfcomm_socket_t __rfcomm_socket_t, uin
 	memset(&addr, 0, sizeof(addr));
 
 	addr.rc_family = AF_BLUETOOTH;
-	addr.rc_channel = __channel;
+	addr.rc_channel = channel;
 	addr.rc_bdaddr = dev_info.bdaddr;
 
-	r = bind(__rfcomm_socket_t.fd, (struct sockaddr*) &addr, sizeof(addr));
+	r = bind(rfcomm_socket.fd, (struct sockaddr*) &addr, sizeof(addr));
 #ifndef NOVERBOSE
 	if (r < 0)
 	{
@@ -102,89 +129,118 @@ static int8_t internal_rfcomm_bind(struct rfcomm_socket_t __rfcomm_socket_t, uin
 	return r;
 }
 
+/**
+ * Internal function to create a rfcomm socket.
+ *
+ * @return handler of the rfcomm connection
+ */
 static struct rfcomm_socket_t internal_rfcomm_socket()
 {
-	struct rfcomm_socket_t __rfcomm_socket_t;
+	struct rfcomm_socket_t rfcomm_socket;
 
-	memset(&__rfcomm_socket_t, 0, sizeof(__rfcomm_socket_t));
+	memset(&rfcomm_socket, 0, sizeof(rfcomm_socket));
 
-	__rfcomm_socket_t.fd = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
+	rfcomm_socket.fd = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
 #ifndef NOVERBOSE
-	if (__rfcomm_socket_t.fd < 0)
+	if (rfcomm_socket.fd < 0)
 	{
 		perror("rfcomm_socket");
 	}
 #endif
 
-	return __rfcomm_socket_t;
+	return rfcomm_socket;
 }
 
-struct rfcomm_socket_t rfcomm_client_socket(uint16_t dev_id, const char* __addr, uint8_t __channel)
+/**
+ * Starts a rfcomm connection with the specified remote device.
+ *
+ * @param dev_id identifier of the local bluetooth device
+ * @param addr address of the remote device
+ * @param channel channel of the remote rfcomm server
+ * @return handler of the rfcomm connection
+ */
+struct rfcomm_socket_t rfcomm_client_socket(uint16_t dev_id, const char* addr, uint8_t channel)
 {
-	struct rfcomm_socket_t __rfcomm_socket_t;
+	struct rfcomm_socket_t rfcomm_socket;
 	int r;
 
-	__rfcomm_socket_t = internal_rfcomm_socket();
-	if (__rfcomm_socket_t.fd < 0)
+	rfcomm_socket = internal_rfcomm_socket();
+	if (rfcomm_socket.fd < 0)
 	{
-		return __rfcomm_socket_t;
+		return rfcomm_socket;
 	}
 
-	__rfcomm_socket_t.dev_id = dev_id;
+	rfcomm_socket.dev_id = dev_id;
 
-	r = internal_rfcomm_connect(__rfcomm_socket_t, __addr, __channel);
+	r = internal_rfcomm_connect(rfcomm_socket, addr, channel);
 	if (r < 0)
 	{
-		internal_rfcomm_cleanup_fd(__rfcomm_socket_t);
-		__rfcomm_socket_t.fd = - 1;
+		internal_rfcomm_cleanup_fd(rfcomm_socket);
+		rfcomm_socket.fd = - 1;
 
-		return __rfcomm_socket_t;
+		return rfcomm_socket;
 	}
 
-	__rfcomm_socket_t.rmt_fd = __rfcomm_socket_t.fd;
+	rfcomm_socket.rmt_fd = rfcomm_socket.fd;
 
-	return __rfcomm_socket_t;
+	return rfcomm_socket;
 }
 
-struct rfcomm_socket_t rfcomm_server_socket(uint16_t dev_id, uint8_t __channel, uint8_t __connections)
+/**
+ * Starts a rfcomm server listening on the specified channel.
+ *
+ * @param dev_id identifier of the local bluetooth device
+ * @param channel channel for listening incoming remote connections
+ * @param connections number of incoming connection which will be accepted
+ * @return handler of the rfcomm connection
+ */
+struct rfcomm_socket_t rfcomm_server_socket(uint16_t dev_id, uint8_t channel, uint8_t connections)
 {
-	struct rfcomm_socket_t __rfcomm_socket_t;
+	struct rfcomm_socket_t rfcomm_socket;
 	int r;
 
-	__rfcomm_socket_t = internal_rfcomm_socket();
-	if (__rfcomm_socket_t.fd < 0)
+	rfcomm_socket = internal_rfcomm_socket();
+	if (rfcomm_socket.fd < 0)
 	{
-		return __rfcomm_socket_t;
+		return rfcomm_socket;
 	}
 
-	__rfcomm_socket_t.dev_id = dev_id;
+	rfcomm_socket.dev_id = dev_id;
 
-	r = internal_rfcomm_bind(__rfcomm_socket_t, __channel);
+	r = internal_rfcomm_bind(rfcomm_socket, channel);
 	if (r < 0)
 	{
-		internal_rfcomm_cleanup_fd(__rfcomm_socket_t);
-		__rfcomm_socket_t.fd = - 1;
+		internal_rfcomm_cleanup_fd(rfcomm_socket);
+		rfcomm_socket.fd = - 1;
 
-		return __rfcomm_socket_t;
+		return rfcomm_socket;
 	}
 
-	__rfcomm_socket_t.rmt_fd = internal_rfcomm_accept(__rfcomm_socket_t, __connections);
-	if (__rfcomm_socket_t.rmt_fd < 0)
+	rfcomm_socket.rmt_fd = internal_rfcomm_accept(rfcomm_socket, connections);
+	if (rfcomm_socket.rmt_fd < 0)
 	{
-		internal_rfcomm_cleanup_fd(__rfcomm_socket_t);
-		__rfcomm_socket_t.fd = - 1;
+		internal_rfcomm_cleanup_fd(rfcomm_socket);
+		rfcomm_socket.fd = - 1;
 
-		return __rfcomm_socket_t;
+		return rfcomm_socket;
 	}
 
-	return __rfcomm_socket_t;
+	return rfcomm_socket;
 }
 
-ssize_t rfcomm_send(struct rfcomm_socket_t __rfcomm_socket_t, const void* buf, size_t buflen)
+/**
+ * Sends a message to the remote device using the rfcomm connection.
+ *
+ * @param rfcomm_socket handler of the rfcomm connection
+ * @param buf buf where the message is stored
+ * @param buflen size of the buf
+ * @return number of bytes sent, will be equals to the buflen
+ */
+ssize_t rfcomm_send(struct rfcomm_socket_t rfcomm_socket, const void* buf, size_t buflen)
 {
 	ssize_t send_len;
 
-	send_len = send(__rfcomm_socket_t.rmt_fd, buf, buflen, 0);
+	send_len = send(rfcomm_socket.rmt_fd, buf, buflen, 0);
 #ifndef NOVERBOSE
 	if (send_len < 0)
 	{
@@ -195,11 +251,19 @@ ssize_t rfcomm_send(struct rfcomm_socket_t __rfcomm_socket_t, const void* buf, s
 	return send_len;
 }
 
-ssize_t rfcomm_recv(struct rfcomm_socket_t __rfcomm_socket_t, void* buf, size_t buflen)
+/**
+ * Receives a message from the remote device using the rfcomm connection.
+ *
+ * @param rfcomm_socket handler of the rfcomm connection
+ * @param buf buf where the message will be stored
+ * @param buflen size of the buf
+ * @return number of bytes received
+ */
+ssize_t rfcomm_recv(struct rfcomm_socket_t rfcomm_socket, void* buf, size_t buflen)
 {
 	ssize_t recv_len;
 
-	recv_len = recv(__rfcomm_socket_t.rmt_fd, buf, buflen, 0);
+	recv_len = recv(rfcomm_socket.rmt_fd, buf, buflen, 0);
 #ifndef NOVERBOSE
 	if (recv_len < 0)
 	{
@@ -210,13 +274,18 @@ ssize_t rfcomm_recv(struct rfcomm_socket_t __rfcomm_socket_t, void* buf, size_t 
 	return recv_len;
 }
 
-void rfcomm_cleanup(struct rfcomm_socket_t __rfcomm_socket_t)
+/**
+ * Cleans the rfcomm connection.
+ *
+ * @param rfcomm_socket handler of the rfcomm connection
+ */
+void rfcomm_cleanup(struct rfcomm_socket_t rfcomm_socket)
 {
 	int r;
 
-	if (__rfcomm_socket_t.rmt_fd != __rfcomm_socket_t.fd)
+	if (rfcomm_socket.rmt_fd != rfcomm_socket.fd)
 	{
-		r = shutdown(__rfcomm_socket_t.rmt_fd, SHUT_RDWR);
+		r = shutdown(rfcomm_socket.rmt_fd, SHUT_RDWR);
 #ifndef NOVERBOSE
 		if (r < 0)
 		{
@@ -224,7 +293,7 @@ void rfcomm_cleanup(struct rfcomm_socket_t __rfcomm_socket_t)
 		}
 #endif
 
-		r = close(__rfcomm_socket_t.rmt_fd);
+		r = close(rfcomm_socket.rmt_fd);
 #ifndef NOVERBOSE
 		if (r < 0)
 		{
@@ -233,7 +302,7 @@ void rfcomm_cleanup(struct rfcomm_socket_t __rfcomm_socket_t)
 #endif
 	}
 
-	r = shutdown(__rfcomm_socket_t.fd, SHUT_RDWR);
+	r = shutdown(rfcomm_socket.fd, SHUT_RDWR);
 #ifndef NOVERBOSE
 	if (r < 0)
 	{
@@ -241,7 +310,7 @@ void rfcomm_cleanup(struct rfcomm_socket_t __rfcomm_socket_t)
 	}
 #endif
 
-	r = close(__rfcomm_socket_t.fd);
+	r = close(rfcomm_socket.fd);
 #ifndef NOVERBOSE
 	if (r < 0)
 	{

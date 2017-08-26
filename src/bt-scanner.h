@@ -31,14 +31,14 @@ extern "C"
  * @param devices list of bluetooth devices found with the scan
  * @return number of bluetooth devices found with the scan
  */
-uint8_t device_inquiry_scan(struct btd_adapter adapter, struct btd_device** devices);
+extern uint8_t device_inquiry_scan(struct btd_adapter adapter, struct btd_device** devices);
 
 /**
  * Prints the information of the remote device
  *
  * @param device remote bluetooth device
  */
-void device_print_information(struct btd_device device);
+extern void device_print_information(struct btd_device device);
 
 /**
  * Reads the name of the remote bluetooth device
@@ -47,14 +47,14 @@ void device_print_information(struct btd_device device);
  * @param device remote bluetooth device
  * @return true on success, false otherwise
  */
-bool device_read_remote_name(struct btd_adapter adapter, struct btd_device* device);
+extern bool device_read_remote_name(struct btd_adapter adapter, struct btd_device* device);
 
 /**
  * Cleans the information of the remote device
  *
  * @param device remote bluetooth device
  */
-void device_cleanup(struct btd_device* device);
+extern void device_cleanup(struct btd_device* device);
 
 #ifdef __cplusplus
 }

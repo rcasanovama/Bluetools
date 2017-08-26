@@ -1,5 +1,11 @@
 #include "obex-utils.h"
 
+/**
+ * Gets the size of the packet.
+ *
+ * @param packet obex packet
+ * @return size of the packet
+ */
 uint16_t get_packet_size(struct obex_packet_t packet)
 {
 	struct obex_packet_header_t* it;
@@ -36,6 +42,12 @@ uint16_t get_packet_size(struct obex_packet_t packet)
 	return packet_size;
 }
 
+/**
+ * Gets the connection_id if the header exists.
+ *
+ * @param packet obex packet
+ * @return connection_id if exists
+ */
 uint32_t get_connection_id(struct obex_packet_t packet)
 {
 	struct obex_packet_header_t* it;
@@ -53,6 +65,12 @@ uint32_t get_connection_id(struct obex_packet_t packet)
 	return 0xFFFFFFFF;
 }
 
+/**
+ * Gets the body if the header exists.
+ *
+ * @param packet obex packet
+ * @return body if exists
+ */
 struct obex_packet_header_t* get_body_header(struct obex_packet_t packet)
 {
 	struct obex_packet_header_t* it;
@@ -70,6 +88,12 @@ struct obex_packet_header_t* get_body_header(struct obex_packet_t packet)
 	return NULL;
 }
 
+/**
+ * Gets the body_end if the header exists.
+ *
+ * @param packet obex packet
+ * @return body_end if exists
+ */
 struct obex_packet_header_t* get_body_end_header(struct obex_packet_t packet)
 {
 	struct obex_packet_header_t* it;
@@ -87,6 +111,14 @@ struct obex_packet_header_t* get_body_end_header(struct obex_packet_t packet)
 	return NULL;
 }
 
+/**
+ * Dumps the packet into a string format.
+ *
+ * @param obex_packet obex packet
+ * @param buf buf where the packet will be stored in string format
+ * @param buflen size of the buf
+ * @return number of bytes written, will be equals to the buflen
+ */
 size_t packet_to_str(struct obex_packet_t obex_packet, void* buf, size_t buflen)
 {
 	struct obex_packet_header_t* it;
@@ -157,6 +189,14 @@ size_t packet_to_str(struct obex_packet_t obex_packet, void* buf, size_t buflen)
 	return buflen;
 }
 
+/**
+ * Dumps the string into a packet format.
+ *
+ * @param obex_packet obex packet
+ * @param buf buf where the packet is stored in string format
+ * @param buflen size of the buf
+ * @return number of bytes written, will be equals to the buflen
+ */
 size_t str_to_packet(struct obex_packet_t* obex_packet, const void* buf, size_t buflen)
 {
 	uint16_t offset;
@@ -245,6 +285,12 @@ size_t str_to_packet(struct obex_packet_t* obex_packet, const void* buf, size_t 
 	return buflen;
 }
 
+/**
+ * Checks if the header_id is a valid obex header.
+ *
+ * @param header_id identifier of the header
+ * @return 1 if the header is valid, 0 otherwise
+ */
 uint8_t is_valid_header(uint8_t header_id)
 {
 	uint8_t is_valid;
@@ -289,6 +335,12 @@ uint8_t is_valid_header(uint8_t header_id)
 	return is_valid;
 }
 
+/**
+ * Gets the type of the header identified by the header_id.
+ *
+ * @param header_id identifier of the header
+ * @return basic or extended type
+ */
 enum HEADER_TYPES get_header_type(uint8_t header_id)
 {
 	enum HEADER_TYPES header_type;
@@ -324,6 +376,14 @@ enum HEADER_TYPES get_header_type(uint8_t header_id)
 	return header_type;
 }
 
+/**
+ * Builds a basic obex header and adds it to the headers list.
+ *
+ * @param headers list of the headers, can be null
+ * @param header_id identifier of the header
+ * @param header_value value of the header
+ * @return pointer to the headers list
+ */
 struct obex_packet_header_t* build_basic_header(struct obex_packet_header_t* headers, uint8_t header_id, uint32_t header_value)
 {
 	struct obex_packet_header_t* header;
@@ -351,6 +411,15 @@ struct obex_packet_header_t* build_basic_header(struct obex_packet_header_t* hea
 	return (headers != NULL) ? (headers) : (header);
 }
 
+/**
+ * Builds an extended obex header and adds it to the headers list.
+ *
+ * @param headers list of the headers, can be null
+ * @param header_id identifier of the header
+ * @param header_value value of the header
+ * @param value_size size of the value
+ * @return pointer to the headers list
+ */
 struct obex_packet_header_t* build_extended_header(struct obex_packet_header_t* headers, uint8_t header_id, uint8_t* header_value, uint16_t value_size)
 {
 	struct obex_packet_header_t* header;
@@ -379,6 +448,11 @@ struct obex_packet_header_t* build_extended_header(struct obex_packet_header_t* 
 	return (headers != NULL) ? (headers) : (header);
 }
 
+/**
+ * Destroys the headers list freeing the memory.
+ *
+ * @param headers list of the headers
+ */
 void destroy_headers(struct obex_packet_header_t** headers)
 {
 	struct obex_packet_header_t* it;
@@ -397,6 +471,11 @@ void destroy_headers(struct obex_packet_header_t** headers)
 	}
 }
 
+/**
+ * Destroys the packet freeing the memory.
+ *
+ * @param packet obex packet
+ */
 void destroy_packet(struct obex_packet_t** packet)
 {
 	if (*packet != NULL)
@@ -413,6 +492,11 @@ void destroy_packet(struct obex_packet_t** packet)
 	}
 }
 
+/**
+ * Displays the obex packet in a string format.
+ *
+ * @param packet obex packet
+ */
 void display_obex_packet(struct obex_packet_t packet)
 {
 	void* buf;
@@ -430,6 +514,12 @@ void display_obex_packet(struct obex_packet_t packet)
 	}
 }
 
+/**
+ * Displays the obex packet in a string format.
+ *
+ * @param buf buf where the packet is stored in string format
+ * @param buflen size of the buf
+ */
 void display_obex_packet_str(const void* buf, size_t buflen)
 {
 	size_t i;

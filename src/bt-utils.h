@@ -18,13 +18,37 @@ extern "C"
 
 #include "bt-types.h"
 
-struct btd_adapter_name* str_to_adapter_name_t(char* _name);
+/**
+ * Dumps the name into an adapter_name_t format.
+ *
+ * @param _name name of the adapter
+ * @return name into an adapter_name_t format
+ */
+extern struct btd_adapter_name* str_to_adapter_name_t(char* _name);
 
-struct btd_adapter_class* str_to_adapter_class_t(char* _class);
+/**
+ * Dumps the class into an adapter_class_t format.
+ *
+ * @param _class class of the adapter
+ * @return class into an adapter_class_t format
+ */
+extern struct btd_adapter_class* str_to_adapter_class_t(char* _class);
 
-struct btd_adapter_class* cls_to_adapter_class_t(uint8_t _cls[3]);
+/**
+ * Dumps the class into an adapter_class_t format.
+ *
+ * @param _cls class of the adapter
+ * @return class into an adapter_class_t format
+ */
+extern struct btd_adapter_class* cls_to_adapter_class_t(uint8_t _cls[3]);
 
-struct btd_adapter_address* str_to_adapter_address_t(char* _address);
+/**
+ * Dumps the address into an adapter_address_t format.
+ *
+ * @param _address address of the adapter
+ * @return address into an adapter_address_t format
+ */
+extern struct btd_adapter_address* str_to_adapter_address_t(char* _address);
 
 #ifdef __cplusplus
 }

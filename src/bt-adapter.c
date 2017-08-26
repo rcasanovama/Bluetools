@@ -4,519 +4,25 @@
  */
 #include "bt-adapter.h"
 
+/**
+ * Internal function to change the physical address of the device.
+ *
+ * @param dd device handler
+ * @param dev_id identifier of the adapter
+ * @param _addr new physical address
+ * @param _transient if the new physical address will be transient
+ * @param _reset if the device will be reset after the change
+ * @return exit code
+ */
 extern int hci_write_bd_addr(int dd, uint16_t dev_id, char* _addr, uint8_t _transient, uint8_t _reset);
 
-static char* get_minor_device_name(int major, int minor);
-
-static struct btd_adapter* adapter_init(uint16_t dev_id)
-{
-	struct btd_adapter* adapter;
-	int dd;
-
-	// Only to check if the device exists
-	dd = hci_open_dev(dev_id);
-	if (dd < 0)
-	{
-		return NULL;
-	}
-	hci_close_dev(dd);
-
-	adapter = (struct btd_adapter*) malloc(sizeof(struct btd_adapter));
-	if (! adapter)
-	{
-		return NULL;
-	}
-
-	adapter->dev_id = (uint16_t) dev_id;
-	adapter->adapter_name = adapter_read_local_name(adapter->dev_id);
-	assert(adapter->adapter_name != NULL);
-	adapter->adapter_class = adapter_read_local_class(adapter->dev_id);
-	assert(adapter->adapter_class != NULL);
-	adapter->adapter_address = adapter_read_local_address(adapter->dev_id);
-	assert(adapter->adapter_address != NULL);
-	adapter->adapter_version = adapter_read_local_version(adapter->dev_id);
-	assert(adapter->adapter_version != NULL);
-	adapter->afh_mode = adapter_read_local_afh_mode(adapter->afh_mode);
-
-	return adapter;
-}
-
-struct btd_adapter* adapter_get_default(void)
-{
-	int32_t dev_id;
-
-	dev_id = hci_get_route(NULL);
-	if (dev_id < 0)
-	{
-		return NULL;
-	}
-
-	return adapter_init((uint16_t) dev_id);
-}
-
-struct btd_adapter* adapter_find_by_id(uint16_t dev_id)
-{
-	return adapter_init(dev_id);
-}
-
-uint16_t adapter_get_all(struct btd_adapter** adapters)
-{
-	struct hci_dev_list_req* dev_list_req;
-	struct hci_dev_req* dev_req;
-
-	int32_t btd_socket, dev_id;
-	uint16_t number_adapters;
-	int i;
-
-
-	btd_socket = socket(AF_BLUETOOTH, SOCK_RAW | SOCK_CLOEXEC, BTPROTO_HCI);
-	if (btd_socket < 0)
-	{
-		return 0;
-	}
-
-	dev_list_req = (struct hci_dev_list_req*) malloc(HCI_MAX_DEV * sizeof(*dev_req) + sizeof(*dev_list_req));
-	if (! dev_list_req)
-	{
-		close(btd_socket);
-		return 0;
-	}
-
-	memset(dev_list_req, 0, HCI_MAX_DEV * sizeof(*dev_req) + sizeof(*dev_list_req));
-
-	dev_list_req->dev_num = HCI_MAX_DEV;
-	dev_req = dev_list_req->dev_req;
-
-	if (ioctl(btd_socket, HCIGETDEVLIST, (void*) dev_list_req) < 0)
-	{
-		free(dev_list_req);
-		close(btd_socket);
-		return 0;
-	}
-
-	(*adapters) = NULL;
-	number_adapters = 0;
-	for (i = 0; i < dev_list_req->dev_num; i ++, dev_req ++)
-	{
-		if (hci_test_bit(HCI_UP, &dev_req->dev_opt))
-		{
-			dev_id = dev_req->dev_id;
-			if (dev_id >= 0)
-			{
-				(*adapters) = (struct btd_adapter*) realloc((*adapters), (number_adapters + 1) * sizeof(struct btd_adapter));
-				(*adapters)[number_adapters] = *(adapter_init((uint16_t) dev_id));
-				number_adapters ++;
-			}
-		}
-	}
-
-	return number_adapters;
-}
-
-uint16_t adapter_get_index(struct btd_adapter adapter)
-{
-	return adapter.dev_id;
-}
-
-void adapter_print_information(struct btd_adapter adapter)
-{
-	struct hci_dev_info dev_info;
-	int dd, err = 0;
-
-	dd = hci_open_dev(adapter.dev_id);
-	if (dd < 0)
-	{
-		perror("HCI device open failed");
-		err = 1;
-	}
-
-	if (hci_devinfo(adapter.dev_id, &dev_info) < 0)
-	{
-		perror("Can't get device info");
-		err = 1;
-
-		hci_close_dev(dd);
-	}
-
-	if (! err)
-	{
-		adapter_print_name(*adapter.adapter_name);
-		fprintf(stdout, "  Type: %s  Bus: %s\n", hci_typetostr((dev_info.type & 0x30) >> 4), hci_bustostr(dev_info.type & 0x0f));
-		fprintf(stdout, "\tBD Address: %s  ACL MTU: %d:%d  SCO MTU: %d:%d\n", adapter.adapter_address->addr, dev_info.acl_mtu, dev_info.acl_pkts, dev_info.sco_mtu, dev_info.sco_pkts);
-
-		fprintf(stdout, "\n");
-		adapter_print_class(*adapter.adapter_class);
-
-		fprintf(stdout, "\n");
-		adapter_print_version(*adapter.adapter_version);
-
-		fprintf(stdout, "\n");
-		adapter_print_afh_mode(adapter.afh_mode);
-
-		fprintf(stdout, "\n");
-	}
-}
-
-struct btd_adapter_name* adapter_read_local_name(uint16_t dev_id)
-{
-	struct btd_adapter_name* adapter_name;
-	struct hci_dev_info dev_info;
-	char name[HCI_MAX_NAME_LENGTH];
-	int dd;
-
-	dd = hci_open_dev(dev_id);
-	if (dd < 0)
-	{
-		return NULL;
-	}
-
-	if (hci_devinfo(dev_id, &dev_info) < 0)
-	{
-		hci_close_dev(dd);
-		return NULL;
-	}
-
-	adapter_name = (struct btd_adapter_name*) malloc(sizeof(struct btd_adapter_name));
-	if (! adapter_name)
-	{
-		hci_close_dev(dd);
-		return NULL;
-	}
-
-	if (hci_read_local_name(dd, sizeof(name), name, 1000) < 0)
-	{
-		free(adapter_name);
-		hci_close_dev(dd);
-		return NULL;
-	}
-
-	adapter_name->name = strdup(name);
-	adapter_name->short_name = strdup(dev_info.name);
-
-	hci_close_dev(dd);
-
-	return adapter_name;
-}
-
-bool adapter_write_local_name(uint16_t dev_id, struct btd_adapter_name adapter_name)
-{
-	int dd;
-
-	dd = hci_open_dev(dev_id);
-	if (dd < 0)
-	{
-		return false;
-	}
-
-	if (hci_write_local_name(dd, adapter_name.name, 1000) < 0)
-	{
-		hci_close_dev(dd);
-		return false;
-	}
-
-	hci_close_dev(dd);
-
-	return true;
-}
-
-void adapter_print_name(struct btd_adapter_name adapter_name)
-{
-	fprintf(stdout, "%s:\t%s", adapter_name.short_name, adapter_name.name);
-}
-
-struct btd_adapter_class* adapter_read_local_class(uint16_t dev_id)
-{
-	struct btd_adapter_class* adapter_class;
-	char dev_class[10];
-	uint8_t cls[3];
-	int dd;
-
-	dd = hci_open_dev(dev_id);
-	if (dd < 0)
-	{
-		return NULL;
-	}
-
-	adapter_class = (struct btd_adapter_class*) malloc(sizeof(struct btd_adapter_class));
-	if (! adapter_class)
-	{
-		hci_close_dev(dd);
-		return NULL;
-	}
-
-	if (hci_read_class_of_dev(dd, cls, 1000) < 0)
-	{
-		free(adapter_class);
-		hci_close_dev(dd);
-		return NULL;
-	}
-
-	adapter_class->cls[2] = cls[2];
-	adapter_class->cls[1] = cls[1];
-	adapter_class->cls[0] = cls[0];
-
-	snprintf(dev_class, 10, "%02x%02x%02x", cls[2], cls[1], cls[0]);
-	adapter_class->dev_class = (uint32_t) strtoul(dev_class, NULL, 16);
-
-	adapter_class->major_class = cls[1] & ((uint8_t) 0x1f);
-	adapter_class->minor_class = cls[0] >> 2;
-
-	hci_close_dev(dd);
-
-	return adapter_class;
-}
-
-bool adapter_write_local_class(uint16_t dev_id, struct btd_adapter_class adapter_class)
-{
-	int dd;
-
-	dd = hci_open_dev(dev_id);
-	if (dd < 0)
-	{
-		return false;
-	}
-
-	if (hci_write_class_of_dev(dd, adapter_class.dev_class, 1000) < 0)
-	{
-		hci_close_dev(dd);
-		return false;
-	}
-
-	hci_close_dev(dd);
-
-	return true;
-}
-
-void adapter_print_class(struct btd_adapter_class adapter_class)
-{
-	static const char* services[] = {"Positioning", "Networking", "Rendering", "Capturing", "Object Transfer", "Audio", "Telephony", "Information"};
-	static const char* major_devices[] = {"Miscellaneous", "Computer", "Phone", "LAN Access", "Audio/Video", "Peripheral", "Imaging", "Uncategorized"};
-
-	bool first;
-	unsigned int i;
-
-	fprintf(stdout, "\tDevice class:\t\t0x%02x%02x%02x\n", adapter_class.cls[2], adapter_class.cls[1], adapter_class.cls[0]);
-	fprintf(stdout, "\tService classes:\t");
-	if (adapter_class.cls[2])
-	{
-		first = true;
-		for (i = 0; i < (sizeof(services) / sizeof(*services)); i ++)
-		{
-			if (adapter_class.cls[2] & (1 << i))
-			{
-				if (! first)
-				{
-					fprintf(stdout, ", ");
-				}
-				fprintf(stdout, "%s", services[i]);
-				first = false;
-			}
-		}
-		fprintf(stdout, "\n");
-	}
-	else
-	{
-		fprintf(stdout, "Unspecified\n");
-	}
-
-	fprintf(stdout, "\tClass description:\t");
-	if ((adapter_class.major_class) >= sizeof(major_devices) / sizeof(*major_devices))
-	{
-		fprintf(stdout, "Invalid device class!\n");
-	}
-	else
-	{
-		fprintf(stdout, "%s, %s\n", major_devices[adapter_class.major_class], get_minor_device_name(adapter_class.major_class, adapter_class.minor_class));
-	}
-}
-
-struct btd_adapter_address* adapter_read_local_address(uint16_t dev_id)
-{
-	struct btd_adapter_address* adapter_address;
-	struct hci_dev_info dev_info;
-	int dd;
-
-	dd = hci_open_dev(dev_id);
-	if (dd < 0)
-	{
-		return NULL;
-	}
-
-	if (hci_devinfo(dev_id, &dev_info) < 0)
-	{
-		hci_close_dev(dd);
-		return NULL;
-	}
-
-	adapter_address = (struct btd_adapter_address*) malloc(sizeof(struct btd_adapter_address));
-	if (! adapter_address)
-	{
-		hci_close_dev(dd);
-		return NULL;
-	}
-
-	adapter_address->bdaddr = dev_info.bdaddr;
-	ba2str(&dev_info.bdaddr, adapter_address->addr);
-
-	hci_close_dev(dd);
-
-	return adapter_address;
-}
-
-bool adapter_write_local_address(uint16_t dev_id, struct btd_adapter_address adapter_address)
-{
-	int dd;
-
-	dd = hci_open_dev(dev_id);
-	if (dd < 0)
-	{
-		return false;
-	}
-
-	if (hci_write_bd_addr(dd, dev_id, adapter_address.addr, 0, 0) < 0)
-	{
-		hci_close_dev(dd);
-		return false;
-	}
-
-	hci_close_dev(dd);
-
-	return true;
-}
-
-void adapter_print_address(struct btd_adapter_address adapter_address)
-{
-	fprintf(stdout, "\tBD Address: %s", adapter_address.addr);
-}
-
-struct btd_adapter_version* adapter_read_local_version(uint16_t dev_id)
-{
-	struct btd_adapter_version* adapter_version;
-	struct hci_dev_info dev_info;
-	struct hci_version ver;
-	int dd;
-
-	dd = hci_open_dev(dev_id);
-	if (dd < 0)
-	{
-		return NULL;
-	}
-
-	if (hci_devinfo(dev_id, &dev_info) < 0)
-	{
-		hci_close_dev(dd);
-		return NULL;
-	}
-
-	adapter_version = (struct btd_adapter_version*) malloc(sizeof(struct btd_adapter_version));
-	if (! adapter_version)
-	{
-		hci_close_dev(dd);
-		return NULL;
-	}
-
-	if (hci_read_local_version(dd, &ver, 1000) < 0)
-	{
-		free(adapter_version);
-		hci_close_dev(dd);
-		return NULL;
-	}
-
-	adapter_version->ver = ver;
-	adapter_version->hci_ver = hci_vertostr(ver.hci_ver);
-//	if (((dev_info.type & 0x30) >> 4) == HCI_BREDR)
-//	{
-		adapter_version->lmp_ver = lmp_vertostr(ver.lmp_ver);
-//	}
-//	else
-//	{
-//		adapter_version->lmp_ver = lmp_vertostr(ver.lmp_ver);
-//	}
-	adapter_version->type = dev_info.type;
-
-	return adapter_version;
-}
-
-void adapter_print_version(struct btd_adapter_version adapter_version)
-{
-	fprintf(stdout, "\tHCI Version: %s (0x%x)  Revision: 0x%x\n"
-			"\t%s Version: %s (0x%x)  Subversion: 0x%x\n"
-			"\tManufacturer: %s (%d)\n", adapter_version.hci_ver ? adapter_version.hci_ver : "n/a", adapter_version.ver.hci_ver, adapter_version.ver.hci_rev, (((adapter_version.type & 0x30) >> 4) == HCI_BREDR) ? "LMP" : "PAL", adapter_version.lmp_ver ? adapter_version.lmp_ver : "n/a", adapter_version.ver.lmp_ver, adapter_version.ver.lmp_subver, bt_compidtostr(adapter_version.ver.manufacturer), adapter_version.ver.manufacturer);
-}
-
-uint8_t adapter_read_local_afh_mode(uint16_t dev_id)
-{
-	uint8_t afh_mode;
-	int dd;
-
-	dd = hci_open_dev(dev_id);
-	if (dd < 0)
-	{
-		return 0;
-	}
-
-	if (hci_read_afh_mode(dd, &afh_mode, 1000) < 0)
-	{
-		hci_close_dev(dd);
-		return 0;
-	}
-
-	return afh_mode;
-}
-
-void adapter_print_afh_mode(uint8_t afh_mode)
-{
-	fprintf(stdout, "\tAFH mode: %s", afh_mode == 1 ? "Enabled" : "Disabled");
-}
-
-void adapter_cleanup(struct btd_adapter* adapter)
-{
-	// free adapter_name
-	if (adapter->adapter_name)
-	{
-		if (adapter->adapter_name->name)
-		{
-			free(adapter->adapter_name->name);
-			adapter->adapter_name->name = NULL;
-		}
-		if (adapter->adapter_name->short_name)
-		{
-			free(adapter->adapter_name->short_name);
-			adapter->adapter_name->short_name = NULL;
-		}
-		free(adapter->adapter_name);
-		adapter->adapter_name = NULL;
-	}
-	// free adapter_class
-	if (adapter->adapter_class)
-	{
-		free(adapter->adapter_class);
-		adapter->adapter_class = NULL;
-	}
-	// free adapter_address
-	if (adapter->adapter_address)
-	{
-		free(adapter->adapter_address);
-		adapter->adapter_address = NULL;
-	}
-	// free adapter_version
-	if (adapter->adapter_version)
-	{
-		if (adapter->adapter_version->hci_ver)
-		{
-			free(adapter->adapter_version->hci_ver);
-			adapter->adapter_version->hci_ver = NULL;
-		}
-		if (adapter->adapter_version->lmp_ver)
-		{
-			free(adapter->adapter_version->lmp_ver);
-			adapter->adapter_version->lmp_ver = NULL;
-		}
-		free(adapter->adapter_version);
-		adapter->adapter_version = NULL;
-	}
-}
-
+/**
+ * Gets the name of the device class function, identified by major and minor bits.
+ *
+ * @param major major bit of the class
+ * @param minor minor bit of the class
+ * @return name of the device class function
+ */
 static char* get_minor_device_name(int major, int minor)
 {
 	switch (major)
@@ -778,4 +284,628 @@ static char* get_minor_device_name(int major, int minor)
 		}
 	}
 	return "Unknown (reserved) minor device class";
+}
+
+/**
+ * Internal function to initialize the adapter.
+ *
+ * @param dev_id identifier of the adapter
+ * @return adapter or null if not exists
+ */
+static struct btd_adapter* adapter_init(uint16_t dev_id)
+{
+	struct btd_adapter* adapter;
+	int dd;
+
+	// Only to check if the device exists
+	dd = hci_open_dev(dev_id);
+	if (dd < 0)
+	{
+		return NULL;
+	}
+	hci_close_dev(dd);
+
+	adapter = (struct btd_adapter*) malloc(sizeof(struct btd_adapter));
+	if (! adapter)
+	{
+		return NULL;
+	}
+
+	adapter->dev_id = (uint16_t) dev_id;
+	adapter->adapter_name = adapter_read_local_name(adapter->dev_id);
+	assert(adapter->adapter_name != NULL);
+	adapter->adapter_class = adapter_read_local_class(adapter->dev_id);
+	assert(adapter->adapter_class != NULL);
+	adapter->adapter_address = adapter_read_local_address(adapter->dev_id);
+	assert(adapter->adapter_address != NULL);
+	adapter->adapter_version = adapter_read_local_version(adapter->dev_id);
+	assert(adapter->adapter_version != NULL);
+	adapter->afh_mode = adapter_read_local_afh_mode(adapter->afh_mode);
+
+	return adapter;
+}
+
+/**
+ * Gets the default bluetooth adapter.
+ *
+ * @return default bluetooth adapter
+ */
+struct btd_adapter* adapter_get_default(void)
+{
+	int32_t dev_id;
+
+	dev_id = hci_get_route(NULL);
+	if (dev_id < 0)
+	{
+		return NULL;
+	}
+
+	return adapter_init((uint16_t) dev_id);
+}
+
+/**
+ * Finds the adapter identified by dev_id.
+ *
+ * @param dev_id identifier of the adapter
+ * @return adapter or null if not exists
+ */
+struct btd_adapter* adapter_find_by_id(uint16_t dev_id)
+{
+	return adapter_init(dev_id);
+}
+
+/**
+ * Gets all bluetooth adapters.
+ *
+ * @param adapters list of adapters
+ * @return number of adapters in the list
+ */
+uint16_t adapter_get_all(struct btd_adapter** adapters)
+{
+	struct hci_dev_list_req* dev_list_req;
+	struct hci_dev_req* dev_req;
+
+	int32_t btd_socket, dev_id;
+	uint16_t number_adapters;
+	int i;
+
+
+	btd_socket = socket(AF_BLUETOOTH, SOCK_RAW | SOCK_CLOEXEC, BTPROTO_HCI);
+	if (btd_socket < 0)
+	{
+		return 0;
+	}
+
+	dev_list_req = (struct hci_dev_list_req*) malloc(HCI_MAX_DEV * sizeof(*dev_req) + sizeof(*dev_list_req));
+	if (! dev_list_req)
+	{
+		close(btd_socket);
+		return 0;
+	}
+
+	memset(dev_list_req, 0, HCI_MAX_DEV * sizeof(*dev_req) + sizeof(*dev_list_req));
+
+	dev_list_req->dev_num = HCI_MAX_DEV;
+	dev_req = dev_list_req->dev_req;
+
+	if (ioctl(btd_socket, HCIGETDEVLIST, (void*) dev_list_req) < 0)
+	{
+		free(dev_list_req);
+		close(btd_socket);
+		return 0;
+	}
+
+	(*adapters) = NULL;
+	number_adapters = 0;
+	for (i = 0; i < dev_list_req->dev_num; i ++, dev_req ++)
+	{
+		if (hci_test_bit(HCI_UP, &dev_req->dev_opt))
+		{
+			dev_id = dev_req->dev_id;
+			if (dev_id >= 0)
+			{
+				(*adapters) = (struct btd_adapter*) realloc((*adapters), (number_adapters + 1) * sizeof(struct btd_adapter));
+				(*adapters)[number_adapters] = *(adapter_init((uint16_t) dev_id));
+				number_adapters ++;
+			}
+		}
+	}
+
+	return number_adapters;
+}
+
+/**
+ * Gets the index of the specified adapter.
+ *
+ * @param adapter bluetooth adapter
+ * @return index of the adapter
+ */
+uint16_t adapter_get_index(struct btd_adapter adapter)
+{
+	return adapter.dev_id;
+}
+
+/**
+ * Prints the information of the bluetooth adapter.
+ *
+ * @param adapter bluetooth adapter
+ */
+void adapter_print_information(struct btd_adapter adapter)
+{
+	struct hci_dev_info dev_info;
+	int dd, err = 0;
+
+	dd = hci_open_dev(adapter.dev_id);
+	if (dd < 0)
+	{
+		perror("HCI device open failed");
+		err = 1;
+	}
+
+	if (hci_devinfo(adapter.dev_id, &dev_info) < 0)
+	{
+		perror("Can't get device info");
+		err = 1;
+
+		hci_close_dev(dd);
+	}
+
+	if (! err)
+	{
+		adapter_print_name(*adapter.adapter_name);
+		fprintf(stdout, "  Type: %s  Bus: %s\n", hci_typetostr((dev_info.type & 0x30) >> 4), hci_bustostr(dev_info.type & 0x0f));
+		fprintf(stdout, "\tBD Address: %s  ACL MTU: %d:%d  SCO MTU: %d:%d\n", adapter.adapter_address->addr, dev_info.acl_mtu, dev_info.acl_pkts, dev_info.sco_mtu, dev_info.sco_pkts);
+
+		fprintf(stdout, "\n");
+		adapter_print_class(*adapter.adapter_class);
+
+		fprintf(stdout, "\n");
+		adapter_print_version(*adapter.adapter_version);
+
+		fprintf(stdout, "\n");
+		adapter_print_afh_mode(adapter.afh_mode);
+
+		fprintf(stdout, "\n");
+	}
+}
+
+/**
+ * Reads the local name of the bluetooth adapter identified by dev_id.
+ *
+ * @param dev_id identifier of the adapter
+ * @return name as btd_adapter_name format
+ */
+struct btd_adapter_name* adapter_read_local_name(uint16_t dev_id)
+{
+	struct btd_adapter_name* adapter_name;
+	struct hci_dev_info dev_info;
+	char name[HCI_MAX_NAME_LENGTH];
+	int dd;
+
+	dd = hci_open_dev(dev_id);
+	if (dd < 0)
+	{
+		return NULL;
+	}
+
+	if (hci_devinfo(dev_id, &dev_info) < 0)
+	{
+		hci_close_dev(dd);
+		return NULL;
+	}
+
+	adapter_name = (struct btd_adapter_name*) malloc(sizeof(struct btd_adapter_name));
+	if (! adapter_name)
+	{
+		hci_close_dev(dd);
+		return NULL;
+	}
+
+	if (hci_read_local_name(dd, sizeof(name), name, 1000) < 0)
+	{
+		free(adapter_name);
+		hci_close_dev(dd);
+		return NULL;
+	}
+
+	adapter_name->name = strdup(name);
+	adapter_name->short_name = strdup(dev_info.name);
+
+	hci_close_dev(dd);
+
+	return adapter_name;
+}
+
+/**
+ * Writes the local name of the bluetooth adapter.
+ *
+ * @param dev_id identifier of the adapter
+ * @param adapter_name new name of the adapter
+ * @return true on success, false otherwise
+ */
+bool adapter_write_local_name(uint16_t dev_id, struct btd_adapter_name adapter_name)
+{
+	int dd;
+
+	dd = hci_open_dev(dev_id);
+	if (dd < 0)
+	{
+		return false;
+	}
+
+	if (hci_write_local_name(dd, adapter_name.name, 1000) < 0)
+	{
+		hci_close_dev(dd);
+		return false;
+	}
+
+	hci_close_dev(dd);
+
+	return true;
+}
+
+/**
+ * Prints the local name of the bluetooth adapter.
+ *
+ * @param adapter_name name of the bluetooth adapter
+ */
+void adapter_print_name(struct btd_adapter_name adapter_name)
+{
+	fprintf(stdout, "%s:\t%s", adapter_name.short_name, adapter_name.name);
+}
+
+/**
+ * Reads the local class of the bluetooth adapter identified by dev_id.
+ *
+ * @param dev_id identifier of the adapter
+ * @return class as btd_adapter_class format
+ */
+struct btd_adapter_class* adapter_read_local_class(uint16_t dev_id)
+{
+	struct btd_adapter_class* adapter_class;
+	char dev_class[10];
+	uint8_t cls[3];
+	int dd;
+
+	dd = hci_open_dev(dev_id);
+	if (dd < 0)
+	{
+		return NULL;
+	}
+
+	adapter_class = (struct btd_adapter_class*) malloc(sizeof(struct btd_adapter_class));
+	if (! adapter_class)
+	{
+		hci_close_dev(dd);
+		return NULL;
+	}
+
+	if (hci_read_class_of_dev(dd, cls, 1000) < 0)
+	{
+		free(adapter_class);
+		hci_close_dev(dd);
+		return NULL;
+	}
+
+	adapter_class->cls[2] = cls[2];
+	adapter_class->cls[1] = cls[1];
+	adapter_class->cls[0] = cls[0];
+
+	snprintf(dev_class, 10, "%02x%02x%02x", cls[2], cls[1], cls[0]);
+	adapter_class->dev_class = (uint32_t) strtoul(dev_class, NULL, 16);
+
+	adapter_class->major_class = cls[1] & ((uint8_t) 0x1f);
+	adapter_class->minor_class = cls[0] >> 2;
+
+	hci_close_dev(dd);
+
+	return adapter_class;
+}
+
+/**
+ * Writes the local class of the bluetooth adapter.
+ *
+ * @param dev_id identifier of the adapter
+ * @param adapter_class new class of the adapter
+ * @return true on success, false otherwise
+ */
+bool adapter_write_local_class(uint16_t dev_id, struct btd_adapter_class adapter_class)
+{
+	int dd;
+
+	dd = hci_open_dev(dev_id);
+	if (dd < 0)
+	{
+		return false;
+	}
+
+	if (hci_write_class_of_dev(dd, adapter_class.dev_class, 1000) < 0)
+	{
+		hci_close_dev(dd);
+		return false;
+	}
+
+	hci_close_dev(dd);
+
+	return true;
+}
+
+/**
+ * Prints the local class of the bluetooth adapter.
+ *
+ * @param adapter_class class of the bluetooth adapter
+ */
+void adapter_print_class(struct btd_adapter_class adapter_class)
+{
+	static const char* services[] = {"Positioning", "Networking", "Rendering", "Capturing", "Object Transfer", "Audio", "Telephony", "Information"};
+	static const char* major_devices[] = {"Miscellaneous", "Computer", "Phone", "LAN Access", "Audio/Video", "Peripheral", "Imaging", "Uncategorized"};
+
+	bool first;
+	unsigned int i;
+
+	fprintf(stdout, "\tDevice class:\t\t0x%02x%02x%02x\n", adapter_class.cls[2], adapter_class.cls[1], adapter_class.cls[0]);
+	fprintf(stdout, "\tService classes:\t");
+	if (adapter_class.cls[2])
+	{
+		first = true;
+		for (i = 0; i < (sizeof(services) / sizeof(*services)); i ++)
+		{
+			if (adapter_class.cls[2] & (1 << i))
+			{
+				if (! first)
+				{
+					fprintf(stdout, ", ");
+				}
+				fprintf(stdout, "%s", services[i]);
+				first = false;
+			}
+		}
+		fprintf(stdout, "\n");
+	}
+	else
+	{
+		fprintf(stdout, "Unspecified\n");
+	}
+
+	fprintf(stdout, "\tClass description:\t");
+	if ((adapter_class.major_class) >= sizeof(major_devices) / sizeof(*major_devices))
+	{
+		fprintf(stdout, "Invalid device class!\n");
+	}
+	else
+	{
+		fprintf(stdout, "%s, %s\n", major_devices[adapter_class.major_class], get_minor_device_name(adapter_class.major_class, adapter_class.minor_class));
+	}
+}
+
+/**
+ * Reads the local address of the bluetooth adapter identified by dev_id.
+ *
+ * @param dev_id identifier of the adapter
+ * @return address as btd_adapter_address format
+ */
+struct btd_adapter_address* adapter_read_local_address(uint16_t dev_id)
+{
+	struct btd_adapter_address* adapter_address;
+	struct hci_dev_info dev_info;
+	int dd;
+
+	dd = hci_open_dev(dev_id);
+	if (dd < 0)
+	{
+		return NULL;
+	}
+
+	if (hci_devinfo(dev_id, &dev_info) < 0)
+	{
+		hci_close_dev(dd);
+		return NULL;
+	}
+
+	adapter_address = (struct btd_adapter_address*) malloc(sizeof(struct btd_adapter_address));
+	if (! adapter_address)
+	{
+		hci_close_dev(dd);
+		return NULL;
+	}
+
+	adapter_address->bdaddr = dev_info.bdaddr;
+	ba2str(&dev_info.bdaddr, adapter_address->addr);
+
+	hci_close_dev(dd);
+
+	return adapter_address;
+}
+
+/**
+ * Writes the local address of the bluetooth adapter.
+ *
+ * @param dev_id identifier of the adapter
+ * @param adapter_address new address of the adapter
+ * @return true on success, false otherwise
+ */
+bool adapter_write_local_address(uint16_t dev_id, struct btd_adapter_address adapter_address)
+{
+	int dd;
+
+	dd = hci_open_dev(dev_id);
+	if (dd < 0)
+	{
+		return false;
+	}
+
+	if (hci_write_bd_addr(dd, dev_id, adapter_address.addr, 0, 0) < 0)
+	{
+		hci_close_dev(dd);
+		return false;
+	}
+
+	hci_close_dev(dd);
+
+	return true;
+}
+
+/**
+ * Prints the local address of the bluetooth adapter.
+ *
+ * @param adapter_address address of the bluetooth adapter
+ */
+void adapter_print_address(struct btd_adapter_address adapter_address)
+{
+	fprintf(stdout, "\tBD Address: %s", adapter_address.addr);
+}
+
+/**
+ * Reads the local version of the bluetooth adapter identified by dev_id.
+ *
+ * @param dev_id identifier of the adapter
+ * @return version as btd_adapter_version format
+ */
+struct btd_adapter_version* adapter_read_local_version(uint16_t dev_id)
+{
+	struct btd_adapter_version* adapter_version;
+	struct hci_dev_info dev_info;
+	struct hci_version ver;
+	int dd;
+
+	dd = hci_open_dev(dev_id);
+	if (dd < 0)
+	{
+		return NULL;
+	}
+
+	if (hci_devinfo(dev_id, &dev_info) < 0)
+	{
+		hci_close_dev(dd);
+		return NULL;
+	}
+
+	adapter_version = (struct btd_adapter_version*) malloc(sizeof(struct btd_adapter_version));
+	if (! adapter_version)
+	{
+		hci_close_dev(dd);
+		return NULL;
+	}
+
+	if (hci_read_local_version(dd, &ver, 1000) < 0)
+	{
+		free(adapter_version);
+		hci_close_dev(dd);
+		return NULL;
+	}
+
+	adapter_version->ver = ver;
+	adapter_version->hci_ver = hci_vertostr(ver.hci_ver);
+//	if (((dev_info.type & 0x30) >> 4) == HCI_BREDR)
+//	{
+	adapter_version->lmp_ver = lmp_vertostr(ver.lmp_ver);
+//	}
+//	else
+//	{
+//		adapter_version->lmp_ver = lmp_vertostr(ver.lmp_ver);
+//	}
+	adapter_version->type = dev_info.type;
+
+	return adapter_version;
+}
+
+/**
+ * Prints the local version of the bluetooth adapter.
+ *
+ * @param adapter_version version of the bluetooth adapter
+ */
+void adapter_print_version(struct btd_adapter_version adapter_version)
+{
+	fprintf(stdout, "\tHCI Version: %s (0x%x)  Revision: 0x%x\n"
+			"\t%s Version: %s (0x%x)  Subversion: 0x%x\n"
+			"\tManufacturer: %s (%d)\n", adapter_version.hci_ver ? adapter_version.hci_ver : "n/a", adapter_version.ver.hci_ver, adapter_version.ver.hci_rev, (((adapter_version.type & 0x30) >> 4) == HCI_BREDR) ? "LMP" : "PAL", adapter_version.lmp_ver ? adapter_version.lmp_ver : "n/a", adapter_version.ver.lmp_ver, adapter_version.ver.lmp_subver, bt_compidtostr(adapter_version.ver.manufacturer), adapter_version.ver.manufacturer);
+}
+
+/**
+ * Reads the afh mode of the bluetooth adapter identified by dev_id.
+ *
+ * @param dev_id identifier of the adapter
+ * @return afh mode of the bluetooth adapter
+ */
+uint8_t adapter_read_local_afh_mode(uint16_t dev_id)
+{
+	uint8_t afh_mode;
+	int dd;
+
+	dd = hci_open_dev(dev_id);
+	if (dd < 0)
+	{
+		return 0;
+	}
+
+	if (hci_read_afh_mode(dd, &afh_mode, 1000) < 0)
+	{
+		hci_close_dev(dd);
+		return 0;
+	}
+
+	return afh_mode;
+}
+
+/**
+ * Prints the afh mode of the bluetooth adapter.
+ *
+ * @param afh_mode afh mode of the bluetooth adapter
+ */
+void adapter_print_afh_mode(uint8_t afh_mode)
+{
+	fprintf(stdout, "\tAFH mode: %s", afh_mode == 1 ? "Enabled" : "Disabled");
+}
+
+/**
+ * Cleans the bluetooth adapter.
+ *
+ * @param adapter bluetooth adapter
+ */
+void adapter_cleanup(struct btd_adapter* adapter)
+{
+	// free adapter_name
+	if (adapter->adapter_name)
+	{
+		if (adapter->adapter_name->name)
+		{
+			free(adapter->adapter_name->name);
+			adapter->adapter_name->name = NULL;
+		}
+		if (adapter->adapter_name->short_name)
+		{
+			free(adapter->adapter_name->short_name);
+			adapter->adapter_name->short_name = NULL;
+		}
+		free(adapter->adapter_name);
+		adapter->adapter_name = NULL;
+	}
+	// free adapter_class
+	if (adapter->adapter_class)
+	{
+		free(adapter->adapter_class);
+		adapter->adapter_class = NULL;
+	}
+	// free adapter_address
+	if (adapter->adapter_address)
+	{
+		free(adapter->adapter_address);
+		adapter->adapter_address = NULL;
+	}
+	// free adapter_version
+	if (adapter->adapter_version)
+	{
+		if (adapter->adapter_version->hci_ver)
+		{
+			free(adapter->adapter_version->hci_ver);
+			adapter->adapter_version->hci_ver = NULL;
+		}
+		if (adapter->adapter_version->lmp_ver)
+		{
+			free(adapter->adapter_version->lmp_ver);
+			adapter->adapter_version->lmp_ver = NULL;
+		}
+		free(adapter->adapter_version);
+		adapter->adapter_version = NULL;
+	}
 }

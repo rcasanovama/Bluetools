@@ -1,5 +1,12 @@
 #include "obex.h"
 
+/**
+ * Internal function to send the request to the OBEX server
+ *
+ * @param obex handler of the obex connection
+ * @param request request packet
+ * @return bytes sent
+ */
 static ssize_t internal_obex_send_packet(struct obex_t obex, struct obex_packet_t request)
 {
 	unsigned char* buf;
@@ -28,6 +35,13 @@ static ssize_t internal_obex_send_packet(struct obex_t obex, struct obex_packet_
 	return send_len;
 }
 
+/**
+ * Internal function to receive the response from the OBEX server
+ *
+ * @param obex handler of the obex connection
+ * @param response response packet
+ * @return bytes received
+ */
 static ssize_t internal_obex_recv_packet(struct obex_t obex, struct obex_packet_t** response)
 {
 	unsigned char* buf;
@@ -64,11 +78,19 @@ static ssize_t internal_obex_recv_packet(struct obex_t obex, struct obex_packet_
 	return recv_len;
 }
 
-struct obex_t obex_init(uint16_t dev_id, const char* __addr, uint8_t __channel)
+/**
+ * Starts an OBEX connection with the specified remote device
+ *
+ * @param dev_id identifier of the local bluetooth device
+ * @param addr address of the remote device
+ * @param channel channel of the remote OBEX service
+ * @return handler of the obex connection
+ */
+struct obex_t obex_init(uint16_t dev_id, const char* addr, uint8_t channel)
 {
 	struct obex_t obex;
 
-	obex.rfcomm_socket = rfcomm_client_socket(dev_id, __addr, __channel);
+	obex.rfcomm_socket = rfcomm_client_socket(dev_id, addr, channel);
 
 	obex.obex_status = (uint8_t) ((obex.rfcomm_socket.fd < 0) ? (OBEX_INIT_ERROR) : (OBEX_INIT_OK));
 	obex.connection_id = 0xFFFFFFFF;
@@ -76,6 +98,13 @@ struct obex_t obex_init(uint16_t dev_id, const char* __addr, uint8_t __channel)
 	return obex;
 }
 
+/**
+ * Sends the connect action to remote device using the obex_init connection.
+ *
+ * @param obex handler of the obex connection
+ * @param headers headers used in the obex_connect
+ * @return response of the obex_connect
+ */
 struct obex_packet_t* obex_connect(struct obex_t* obex, struct obex_packet_header_t* headers)
 {
 	struct obex_packet_t request, * response;
@@ -117,6 +146,13 @@ struct obex_packet_t* obex_connect(struct obex_t* obex, struct obex_packet_heade
 	return response;
 }
 
+/**
+ * Sends the get action to remote device using the obex_init connection.
+ *
+ * @param obex handler of the obex connection
+ * @param headers headers used in the obex_get
+ * @return response of the obex_get obex_get
+ */
 struct obex_packet_t* obex_get(struct obex_t* obex, struct obex_packet_header_t* headers)
 {
 	struct obex_packet_t request, * response;
@@ -147,6 +183,13 @@ struct obex_packet_t* obex_get(struct obex_t* obex, struct obex_packet_header_t*
 	return response;
 }
 
+/**
+ * Sends the get_final action to remote device using the obex_init connection.
+ *
+ * @param obex handler of the obex connection
+ * @param headers headers used in the obex_get_final
+ * @return response of the obex_get_final
+ */
 struct obex_packet_t* obex_get_final(struct obex_t* obex, struct obex_packet_header_t* headers)
 {
 	struct obex_packet_t request, * response;
@@ -177,6 +220,13 @@ struct obex_packet_t* obex_get_final(struct obex_t* obex, struct obex_packet_hea
 	return response;
 }
 
+/**
+ * Sends the put action to remote device using the obex_init connection.
+ *
+ * @param obex handler of the obex connection
+ * @param headers headers used in the obex_put
+ * @return response of the obex_put
+ */
 struct obex_packet_t* obex_put(struct obex_t* obex, struct obex_packet_header_t* headers)
 {
 	struct obex_packet_t request, * response;
@@ -207,6 +257,13 @@ struct obex_packet_t* obex_put(struct obex_t* obex, struct obex_packet_header_t*
 	return response;
 }
 
+/**
+ * Sends the put_final action to remote device using the obex_init connection.
+ *
+ * @param obex handler of the obex connection
+ * @param headers headers used in the obex_put_final
+ * @return response of the obex_put_final
+ */
 struct obex_packet_t* obex_put_final(struct obex_t* obex, struct obex_packet_header_t* headers)
 {
 	struct obex_packet_t request, * response;
@@ -237,6 +294,13 @@ struct obex_packet_t* obex_put_final(struct obex_t* obex, struct obex_packet_hea
 	return response;
 }
 
+/**
+ * Sends the disconnect action to remote device using the obex_init connection.
+ *
+ * @param obex handler of the obex connection
+ * @param headers headers used in the obex_disconnect
+ * @return response of the obex_disconnect
+ */
 struct obex_packet_t* obex_disconnect(struct obex_t* obex, struct obex_packet_header_t* headers)
 {
 	struct obex_packet_t request, * response;
@@ -267,6 +331,11 @@ struct obex_packet_t* obex_disconnect(struct obex_t* obex, struct obex_packet_he
 	return response;
 }
 
+/**
+ * Cleans the OBEX connection
+ *
+ * @param obex handler of the obex connection
+ */
 void obex_cleanup(struct obex_t obex)
 {
 	rfcomm_cleanup(obex.rfcomm_socket);

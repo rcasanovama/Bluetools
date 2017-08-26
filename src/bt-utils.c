@@ -4,6 +4,12 @@
  */
 #include "bt-utils.h"
 
+/**
+ * Dumps the name into an adapter_name_t format.
+ *
+ * @param _name name of the adapter
+ * @return name into an adapter_name_t format
+ */
 struct btd_adapter_name* str_to_adapter_name_t(char* _name)
 {
 	struct btd_adapter_name* adapter_name;
@@ -25,6 +31,12 @@ struct btd_adapter_name* str_to_adapter_name_t(char* _name)
 	return adapter_name;
 }
 
+/**
+ * Dumps the class into an adapter_class_t format.
+ *
+ * @param _class class of the adapter
+ * @return class into an adapter_class_t format
+ */
 struct btd_adapter_class* str_to_adapter_class_t(char* _class)
 {
 	struct btd_adapter_class* adapter_class;
@@ -71,6 +83,12 @@ struct btd_adapter_class* str_to_adapter_class_t(char* _class)
 	return adapter_class;
 }
 
+/**
+ * Dumps the class into an adapter_class_t format.
+ *
+ * @param _cls class of the adapter
+ * @return class into an adapter_class_t format
+ */
 struct btd_adapter_class* cls_to_adapter_class_t(uint8_t _cls[3])
 {
 	struct btd_adapter_class* adapter_class;
@@ -95,6 +113,12 @@ struct btd_adapter_class* cls_to_adapter_class_t(uint8_t _cls[3])
 	return adapter_class;
 }
 
+/**
+ * Dumps the address into an adapter_address_t format.
+ *
+ * @param _address address of the adapter
+ * @return address into an adapter_address_t format
+ */
 struct btd_adapter_address* str_to_adapter_address_t(char* _address)
 {
 	struct btd_adapter_address* adapter_address;

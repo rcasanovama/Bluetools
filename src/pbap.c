@@ -1,13 +1,22 @@
 #include "pbap.h"
 
-struct pbap_t pbap_client(uint16_t dev_id, const char* __addr, uint8_t __channel)
+/**
+ * Starts a Phone Book Access Profile client, which enables devices to
+ * exchange phone-book objects.
+ *
+ * @param dev_id identifier of the local bluetooth device
+ * @param addr address of the remote device
+ * @param channel channel of the remote PBAP service
+ * @return handler of the pbap client
+ */
+struct pbap_t pbap_client(uint16_t dev_id, const char* addr, uint8_t channel)
 {
 	struct obex_packet_header_t* headers;
 	struct obex_packet_t* packet;
 
 	struct pbap_t pbap;
 
-	pbap.obex = obex_init(dev_id, __addr, __channel);
+	pbap.obex = obex_init(dev_id, addr, channel);
 	if (pbap.obex.obex_status == OBEX_INIT_ERROR)
 	{
 		pbap.pbap_status = PBAP_INIT_ERROR;
@@ -27,6 +36,17 @@ struct pbap_t pbap_client(uint16_t dev_id, const char* __addr, uint8_t __channel
 	return pbap;
 }
 
+/**
+ * Gets a phone-book object identified by the name using the PBAP client.
+ *
+ * @param pbap handler of the pbap client
+ * @param name name of the remote phone-book object
+ * @param name_size size of the name
+ * @param type type of the remote phone-book object
+ * @param type_size size of the type
+ * @param buf buf where the retrieved data will be stored, should be null
+ * @return the size of the retrieved data and the size of buf
+ */
 size_t pbap_get(struct pbap_t pbap, uint8_t* name, uint16_t name_size, uint8_t* type, uint16_t type_size, void** buf)
 {
 	struct obex_packet_header_t* headers, * body_header;
@@ -82,6 +102,11 @@ size_t pbap_get(struct pbap_t pbap, uint8_t* name, uint16_t name_size, uint8_t* 
 	return buflen;
 }
 
+/**
+ * Cleans and disconnects the Phone Book Access Profile client
+ *
+ * @param pbap handler of the pbap client
+ */
 void pbap_cleanup(struct pbap_t pbap)
 {
 	struct obex_packet_header_t* headers;
