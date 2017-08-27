@@ -1,1 +1,0 @@
-gcc -g hcidump.c parser/parser.c parser/hci.c parser/amp.c parser/csr.c parser/ericsson.c parser/bpa.c parser/lmp.c parser/l2cap.c parser/att.c parser/smp.c parser/sdp.c parser/rfcomm.c parser/bnep.c parser/avctp.c parser/avdtp.c parser/avrcp.c parser/cmtp.c parser/hcrp.c parser/obex.c parser/hidp.c parser/ppp.c parser/sap.c parser/capi.c parser/tcpip.c -lbluetooth
