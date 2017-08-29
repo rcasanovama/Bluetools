@@ -1,5 +1,3 @@
-AM_CFLAGS = -Winit-self -Wredundant-decls -Wcast-align -Wundef -Wfloat-equal -Winline -Wunreachable-code -Wmissing-declarations -Wmissing-include-dirs -Wswitch-enum -Wswitch-default -Wmain -pedantic-errors -pedantic -Wshadow -Wextra -Wall -g -O -D_GNU_SOURCE
-
 # programs.
 bin_PROGRAMS = test-adapter test-scanner test-utils
 
@@ -11,9 +9,7 @@ test_adapter_SOURCES = test-adapter.c \
                        ../lib/bdaddr.c \
                        ../lib/oui.c \
                        ../lib/oui.h
-
-test_adapter_CFLAGS = $(AM_CFLAGS)
-test_adapter_LDFLAGS = -lbluetooth
+test_adapter_LDADD = -lbluetooth
 
 # test-scanner configurations.
 test_scanner_SOURCES = test-scanner.c \
@@ -25,9 +21,7 @@ test_scanner_SOURCES = test-scanner.c \
                        ../lib/bdaddr.c \
                        ../lib/oui.c \
                        ../lib/oui.h
-
-test_scanner_CFLAGS = $(AM_CFLAGS)
-test_scanner_LDFLAGS = -lbluetooth
+test_scanner_LDADD = -lbluetooth
 
 # test-utils configurations.
 test_utils_SOURCES = test-utils.c \
@@ -39,6 +33,4 @@ test_utils_SOURCES = test-utils.c \
                        ../lib/bdaddr.c \
                        ../lib/oui.c \
                        ../lib/oui.h
-
-test_utils_CFLAGS = $(AM_CFLAGS)
-test_utils_LDFLAGS = -lbluetooth
+test_utils_LDADD = -lbluetooth

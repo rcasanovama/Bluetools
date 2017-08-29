@@ -9,9 +9,27 @@ AC_LANG(C)
 AC_PROG_CC
 
 # Checks for libraries.
+PKG_CHECK_MODULES([BLUEZ], [bluez >= 5.0], [], [AC_MSG_ERROR(BlueZ >= 5.0 is required)])
+PKG_CHECK_MODULES([DBUS], [dbus-1 >= 1.4], [], [AC_MSG_ERROR(D-Bus >= 1.4 is required)])
 
 # Checks for header files.
-AC_CHECK_HEADERS([fcntl.h malloc.h stdint.h stdlib.h string.h sys/ioctl.h sys/socket.h unistd.h])
+AC_CHECK_HEADERS([stdio.h stdlib.h stdint.h stdbool.h string.h unistd.h \
+                  assert.h errno.h endian.h signal.h getopt.h fcntl.h malloc.h \
+                  sys/socket.h sys/ioctl.h sys/stat.h sys/mman.h \
+                  dbus/dbus.h bluetooth/bluetooth.h])
+
+AC_CHECK_HEADERS([bluetooth/l2cap.h bluetooth/rfcomm.h bluetooth/hci.h], [], [],
+[#ifdef HAVE_BLUETOOTH_BLUETOOTH_H
+ # include <bluetooth/bluetooth.h>
+ #endif
+])
+
+AC_CHECK_HEADERS([bluetooth/hci_lib.h], [], [],
+[#if defined(HAVE_BLUETOOTH_BLUETOOTH_H) && defined(HAVE_BLUETOOTH_HCI_H)
+ # include <bluetooth/bluetooth.h>
+ # include <bluetooth/hci.h>
+ #endif
+])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_CHECK_HEADER_STDBOOL
@@ -28,7 +46,10 @@ AC_TYPE_UINT32_T
 AC_FUNC_MALLOC
 AC_FUNC_MMAP
 AC_FUNC_REALLOC
-AC_CHECK_FUNCS([memset munmap socket strdup strpbrk strstr strtoul])
+AC_CHECK_FUNCS([memset memcpy munmap free \
+                printf fprintf snprintf \
+                strcpy strncpy strcat strncat strlen strtoul strstr strpbrk strdup \
+                socket bind listen accept connect send recv shutdown close])
 
 AC_CONFIG_FILES([Makefile tools/Makefile test/Makefile])
 AC_OUTPUT
