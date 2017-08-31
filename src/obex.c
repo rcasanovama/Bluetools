@@ -77,6 +77,7 @@ static ssize_t internal_obex_recv_packet(struct obex_t obex, struct obex_packet_
 	if (recv_len < 0)
 	{
 		*response = NULL;
+		free(buf);
 		return - 1;
 	}
 
@@ -148,8 +149,10 @@ struct obex_packet_t* obex_connect(struct obex_t* obex, struct obex_packet_heade
 	send_len = internal_obex_send_packet(*obex, request);
 	if (send_len < 0)
 	{
+		free(request.info);
 		return NULL;
 	}
+	free(request.info);
 
 	recv_len = internal_obex_recv_packet(*obex, &response);
 	if (recv_len < 0)

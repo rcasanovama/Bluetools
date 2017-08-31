@@ -287,6 +287,8 @@ size_t str_to_packet(struct obex_packet_t* obex_packet, const void* buf, size_t 
 					obex_packet->headers = build_extended_header(obex_packet->headers, header_id, hdr8_value, value_size);
 					offset += sizeof(uint8_t) + sizeof(uint16_t) + value_size;
 
+					free(hdr8_value);
+
 					break;
 				}
 				case UNKNOWN_TYPE:
@@ -450,7 +452,8 @@ struct obex_packet_header_t* build_extended_header(struct obex_packet_header_t* 
 
 	header->header_id = header_id;
 	header->extended.header_size = sizeof(uint8_t) + sizeof(uint16_t) + value_size;
-	header->extended.header_value = header_value;
+	header->extended.header_value = (uint8_t*) malloc(value_size * sizeof(uint8_t));
+	memcpy(header->extended.header_value, header_value, value_size);
 
 	header->header_type = EXTENDED_TYPE;
 	header->next = NULL;
@@ -480,13 +483,16 @@ void destroy_headers(struct obex_packet_header_t** headers)
 	if (*headers != NULL)
 	{
 		it = *headers;
-		while (it->next != NULL)
+		while (it != NULL)
 		{
+			if ((*headers)->header_type == EXTENDED_TYPE)
+			{
+				free((*headers)->extended.header_value);
+			}
 			it = it->next;
 			free(*headers);
 			*headers = it;
 		}
-		free(*headers);
 		*headers = NULL;
 	}
 }
@@ -508,6 +514,7 @@ void destroy_packet(struct obex_packet_t** packet)
 		{
 			destroy_headers(&(*packet)->headers);
 		}
+		free(*packet);
 		*packet = NULL;
 	}
 }

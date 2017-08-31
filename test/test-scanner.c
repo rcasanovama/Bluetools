@@ -29,6 +29,7 @@ int main()
 	int i;
 
 	adapter = adapter_get_default();
+	assert (adapter != NULL);
 
 	number_devices = device_inquiry_scan(*adapter, &devices);
 	for (i = 0; i < number_devices; i ++)

@@ -110,13 +110,17 @@ int main(int argc, char* argv[])
 		/* pull phone book */
 		buflen = pbap_get(pbap, TELECOM_PB, sizeof(TELECOM_PB), XBT_PHONEBOOK, sizeof(XBT_PHONEBOOK), (void*) &buf);
 		write_to_file("pb.vcf", buf, buflen);
+		free(buf);
 
 		/* pull call history */
 		buflen = pbap_get(pbap, TELECOM_CCH, sizeof(TELECOM_CCH), XBT_PHONEBOOK, sizeof(XBT_PHONEBOOK), (void*) &buf);
 		write_to_file("cch.vcf", buf, buflen);
+		free(buf);
 
 		pbap_cleanup(pbap);
 	}
+
+	free(addr);
 
 	return 0;
 }
